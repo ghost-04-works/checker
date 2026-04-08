@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Checker" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Checker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --bg3: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #c8f135;
+      --accent2: #a8d420;
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #555;
+      --red: #ff4444;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Scanner View ── */
+    #scanner-view {
+      display: none;
+      flex-direction: column;
+      height: calc(100dvh - 97px);
+    }
+    #scanner-view.active { display: flex; }
+
+    .scanner-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .scan-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .scan-frame {
+      width: 260px;
+      height: 160px;
+      position: relative;
+    }
+
+    .scan-frame::before,
+    .scan-frame::after,
+    .scan-frame > span::before,
+    .scan-frame > span::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+    .scan-frame::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .scan-frame::after  { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .scan-frame > span::before { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+    .scan-frame > span::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanMove 2s ease-in-out infinite;
+      top: 0;
+    }
+
+    @keyframes scanMove {
+      0%   { top: 8px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: calc(100% - 8px); opacity: 0; }
+    }
+
+    .scan-hint {
+      position: absolute;
+      bottom: 24px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.3px;
+    }
+
+    .scanner-controls {
+      padding: 16px 20px;
+      background: var(--bg2);
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0a;
+      flex: 1;
+    }
+    .btn-primary:active { background: var(--accent2); transform: scale(0.98); }
+    .btn-secondary {
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:active { background: var(--border); transform: scale(0.98); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Search View ── */
+    #search-view {
+      display: none;
+      flex-direction: column;
+      height: calc(100dvh - 97px);
+    }
+    #search-view.active { display: flex; }
+
+    .search-bar {
+      padding: 14px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text3); }
+
+    .search-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .result-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .result-item:active { background: var(--bg3); border-color: var(--accent); }
+
+    .result-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--bg3);
+      flex-shrink: 0;
+    }
+    .result-thumb-placeholder {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .result-info { flex: 1; min-width: 0; }
+    .result-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .result-meta {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px;
+      display: flex;
+      gap: 8px;
+    }
+    .result-code {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .result-arrow {
+      color: var(--text3);
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    /* ── Product Detail Modal ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--bg2);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    .modal-backdrop.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+
+    .modal-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title {
+      font-size: 13px;
+      font-family: 'Space Mono', monospace;
+      color: var(--text2);
+      letter-spacing: 0.5px;
+    }
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg3);
+      border: none;
+      color: var(--text2);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .product-image-wrap {
+      width: 100%;
+      height: 220px;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .product-image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 12px;
+    }
+    .product-image-placeholder {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+
+    .product-body { padding: 20px; }
+
+    .product-brand {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .product-name {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .product-option {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 16px;
+    }
+
+    .product-price {
+      font-family: 'Space Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .info-card {
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .info-card.full { grid-column: 1 / -1; }
+    .info-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 500;
+      word-break: break-all;
+    }
+    .info-value.mono {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+    }
+
+    .link-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .link-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      border-radius: var(--radius);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.15s;
+      color: #0a0a0a;
+    }
+    .link-btn:active { opacity: 0.8; }
+    .link-btn.naver { background: #03c75a; }
+    .link-btn.shopify { background: #96bf48; }
+    .link-btn.disabled {
+      background: var(--bg3);
+      color: var(--text3);
+      pointer-events: none;
+    }
+    .link-btn-icon { font-size: 16px; }
+    .link-btn-arrow { margin-left: auto; }
+
+    /* ── Empty / Error states ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      gap: 12px;
+    }
+    .empty-icon { font-size: 40px; opacity: 0.3; }
+    .empty-title { font-size: 15px; font-weight: 500; color: var(--text2); }
+    .empty-desc { font-size: 13px; color: var(--text3); line-height: 1.5; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 500;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Config View ── */
+    #config-view {
+      display: none;
+      padding: 20px 16px;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #config-view.active { display: flex; }
+
+    .config-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .config-section-title {
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text3);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .config-row {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .config-desc { font-size: 12px; color: var(--text2); }
+    .config-input {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'Space Mono', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .config-input:focus { border-color: var(--accent); }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text3);
+      margin-right: 6px;
+    }
+    .status-dot.ok { background: var(--accent); }
+    .status-dot.err { background: var(--red); }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scan success flash ── */
+    @keyframes flashGreen {
+      0%   { box-shadow: inset 0 0 0 3px var(--accent); }
+      100% { box-shadow: inset 0 0 0 3px transparent; }
+    }
+    .scan-success { animation: flashGreen 0.4s ease-out; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GW<span>.</span>checker</div>
+  <div class="header-right">
+    <span id="status-indicator" style="font-size:12px;color:var(--text3);">
+      <span class="status-dot" id="conn-dot"></span><span id="conn-text">미연결</span>
+    </span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="scanner">📷 스캔</div>
+  <div class="tab" data-tab="search">🔍 검색</div>
+  <div class="tab" data-tab="config">⚙️ 설정</div>
+</div>
+
+<!-- Scanner View -->
+<div id="scanner-view" class="view active">
+  <div class="scanner-container" id="scanner-container">
+    <video id="video" playsinline muted></video>
+    <div class="scan-overlay">
+      <div class="scan-frame">
+        <span></span>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+    <div class="scan-hint">바코드 또는 QR코드를 프레임 안에 맞춰주세요</div>
+  </div>
+  <div class="scanner-controls">
+    <button class="btn btn-primary" id="btn-scan">카메라 시작</button>
+    <button class="btn btn-secondary" id="btn-torch" style="display:none">💡</button>
+  </div>
+</div>
+
+<!-- Search View -->
+<div id="search-view" class="view">
+  <div class="search-bar">
+    <input class="search-input" id="search-input" type="search" placeholder="품목명, 품목코드, 바코드 검색..." autocomplete="off" />
+    <button class="btn btn-secondary" id="btn-search-go">검색</button>
+  </div>
+  <div class="search-results" id="search-results">
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">제품을 검색하세요</div>
+      <div class="empty-desc">품목명, 품목코드, 또는<br>바코드로 검색할 수 있어요</div>
+    </div>
+  </div>
+</div>
+
+<!-- Config View -->
+<div id="config-view" class="view">
+  <div class="config-section">
+    <div class="config-section-title">Google Sheets 연동</div>
+    <div class="config-row">
+      <div class="config-label">API Key</div>
+      <div class="config-desc">Google Cloud Console에서 발급받은 API 키</div>
+      <input class="config-input" id="cfg-api-key" type="password" placeholder="AIza..." autocomplete="off" />
+    </div>
+    <div class="config-row">
+      <div class="config-label">Spreadsheet ID</div>
+      <div class="config-desc">스프레드시트 URL 중간의 ID 값</div>
+      <input class="config-input" id="cfg-sheet-id" type="text" placeholder="1UJoEB..." autocomplete="off" />
+    </div>
+    <div class="config-row">
+      <div class="config-label">시트 이름</div>
+      <div class="config-desc">데이터가 있는 탭 이름</div>
+      <input class="config-input" id="cfg-sheet-name" type="text" placeholder="item" autocomplete="off" />
+    </div>
+  </div>
+  <div class="config-section">
+    <div class="config-section-title">보안</div>
+    <div class="config-row">
+      <div class="config-label">접근 비밀번호</div>
+      <div class="config-desc">앱 실행 시 요구할 비밀번호 (선택)</div>
+      <input class="config-input" id="cfg-password" type="password" placeholder="비워두면 잠금 없음" autocomplete="new-password" />
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-save-config" style="width:100%">설정 저장 및 연결 테스트</button>
+  <div id="config-status" style="text-align:center;font-size:13px;color:var(--text2);min-height:20px;"></div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">PRODUCT INFO</span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="product-image-wrap" id="modal-image-wrap">
+      <div class="product-image-placeholder">📦</div>
+    </div>
+    <div class="product-body">
+      <div class="product-brand" id="modal-brand"></div>
+      <div class="product-name" id="modal-name"></div>
+      <div class="product-option" id="modal-option"></div>
+      <div class="product-price" id="modal-price"></div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">품목코드</div>
+          <div class="info-value mono" id="modal-sku"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">카테고리</div>
+          <div class="info-value" id="modal-category"></div>
+        </div>
+        <div class="info-card full">
+          <div class="info-label">바코드</div>
+          <div class="info-value mono" id="modal-barcode"></div>
+        </div>
+        <div class="info-card full">
+          <div class="info-label">네이버 스토어 제품명</div>
+          <div class="info-value" id="modal-naver-name"></div>
+        </div>
+      </div>
+      <div class="link-buttons" id="modal-links"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Password Lock -->
+<div id="lock-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
+  <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;">GW<span style="color:var(--accent)">.</span>checker</div>
+  <div style="font-size:14px;color:var(--text2);">비밀번호를 입력하세요</div>
+  <input id="lock-input" type="password" class="config-input" style="max-width:280px;text-align:center;font-size:18px;letter-spacing:4px;" placeholder="••••" />
+  <button class="btn btn-primary" id="lock-submit" style="width:280px;">확인</button>
+  <div id="lock-error" style="font-size:13px;color:var(--red);min-height:18px;"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
