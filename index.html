@@ -53,10 +53,19 @@
     }
 
     .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-family: 'Space Mono', monospace;
       font-size: 18px;
       font-weight: 700;
       letter-spacing: -0.5px;
+    }
+    .logo-img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      filter: invert(1);
     }
     .logo span { color: var(--accent); }
 
@@ -620,7 +629,16 @@
 <body>
 
 <header>
-  <div class="logo">Geon<span>.</span>checker</div>
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 596 842" xmlns="http://www.w3.org/2000/svg" style="fill:var(--text);flex-shrink:0;" fill-rule="evenodd" clip-rule="evenodd">
+      <g transform="translate(-9.3635,-817.6605)">
+        <path d="M485.655,1233.52L412.764,1306.41L485.655,1306.41L485.655,1233.52Z"/>
+        <path d="M485.655,1091.31L270.556,1306.41L350.053,1385.9L350,1306.41L485.655,1170.75L485.655,1091.31Z"/>
+        <path d="M485.655,1379.3L412.764,1306.41L412.764,1385.96L350.053,1448.67L207.791,1306.41L485.655,1028.54L485.655,949.101L128.348,1306.41L350.053,1528.11L485.655,1379.3Z"/>
+      </g>
+    </svg>
+    Geon<span>.</span>checker
+  </div>
   <div class="header-right">
     <span id="status-indicator" style="font-size:12px;color:var(--text3);">
       <span class="status-dot" id="conn-dot"></span><span id="conn-text">미연결</span>
@@ -741,11 +759,18 @@
 <div class="toast" id="toast"></div>
 
 <!-- Password Lock -->
-<div id="lock-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
-  <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;">Geon<span style="color:var(--accent)">.</span>checker</div>
-  <div style="font-size:14px;color:var(--text2);">비밀번호를 입력하세요</div>
-  <input id="lock-input" type="password" class="config-input" style="max-width:280px;text-align:center;font-size:18px;letter-spacing:4px;" placeholder="••••" />
-  <button class="btn btn-primary" id="lock-submit" style="width:280px;">확인</button>
+<div id="lock-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;">
+  <svg width="52" height="52" viewBox="0 0 596 842" xmlns="http://www.w3.org/2000/svg" style="fill:var(--text);margin-bottom:4px;" fill-rule="evenodd" clip-rule="evenodd">
+    <g transform="translate(-9.3635,-817.6605)">
+      <path d="M485.655,1233.52L412.764,1306.41L485.655,1306.41L485.655,1233.52Z"/>
+      <path d="M485.655,1091.31L270.556,1306.41L350.053,1385.9L350,1306.41L485.655,1170.75L485.655,1091.31Z"/>
+      <path d="M485.655,1379.3L412.764,1306.41L412.764,1385.96L350.053,1448.67L207.791,1306.41L485.655,1028.54L485.655,949.101L128.348,1306.41L350.053,1528.11L485.655,1379.3Z"/>
+    </g>
+  </svg>
+  <div style="font-family:'Space Mono',monospace;font-size:24px;font-weight:700;">Geon<span style="color:var(--accent)">.</span>checker</div>
+  <div style="font-size:13px;color:var(--text2);">비밀번호를 입력하세요</div>
+  <input id="lock-input" type="password" class="config-input" style="max-width:240px;text-align:center;font-size:18px;letter-spacing:4px;" placeholder="••••" />
+  <button class="btn btn-primary" id="lock-submit" style="width:160px;padding:10px;">확인</button>
   <div id="lock-error" style="font-size:13px;color:var(--red);min-height:18px;"></div>
 </div>
 
