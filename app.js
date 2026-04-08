@@ -122,6 +122,12 @@ function bindEvents() {
   // Config save
   $('btn-save-config').addEventListener('click', saveConfig);
 
+  // Cache clear
+  $('btn-clear-cache').addEventListener('click', clearCache);
+
+  // Full reset
+  $('btn-reset-all').addEventListener('click', resetAll);
+
   // Modal close
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
@@ -170,6 +176,31 @@ async function fetchSheetData(silent = false) {
 function updateConnectionStatus(ok) {
   $('conn-dot').className = 'status-dot ' + (ok ? 'ok' : 'err');
   $('conn-text').textContent = ok ? `${sheetData.length}개 품목` : '미연결';
+}
+
+// ── Cache & Reset
+async function clearCache() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    showToast('캐시 삭제 완료, 새로고침합니다...', 'success');
+    setTimeout(() => location.reload(true), 1000);
+  } catch (e) {
+    showToast('캐시 삭제 실패: ' + e.message, 'error');
+  }
+}
+
+function resetAll() {
+  if (!confirm('설정(API 키, 비밀번호 등)이 모두 삭제됩니다.\n계속하시겠어요?')) return;
+  localStorage.clear();
+  sessionStorage.clear();
+  clearCache();
 }
 
 // ── Config
