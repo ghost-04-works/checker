@@ -60,10 +60,15 @@ window.addEventListener('DOMContentLoaded', () => {
 // ── Lock screen
 function checkLock() {
   const pw = cfg.get('password');
-  if (!pw) return;
+  if (!pw) {
+    lockScreen.style.display = 'none';
+    return;
+  }
   const unlocked = sessionStorage.getItem('gw_unlocked');
-  if (unlocked === '1') return;
-
+  if (unlocked === '1') {
+    lockScreen.style.display = 'none';
+    return;
+  }
   lockScreen.style.display = 'flex';
   $('lock-input').focus();
 }
