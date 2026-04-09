@@ -16,6 +16,7 @@ const COL = {
   IMAGE_URL:    9,  // J 이미지 URL
   NAVER_URL:   10,  // K 네이버스토어 링크
   SHOPIFY_URL: 11,  // L 쇼피파이 링크
+  ALT_BARCODE: 12,  // M 보조바코드
 };
 
 // ── State
@@ -150,7 +151,7 @@ async function fetchSheetData(silent = false) {
     return false;
   }
 
-  const range = encodeURIComponent(`${sheetName}!A2:L`);
+  const range = encodeURIComponent(`${sheetName}!A2:M`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
 
   try {
@@ -225,7 +226,10 @@ async function saveConfig() {
 // ── Barcode lookup
 function findByBarcode(code) {
   const c = code.trim();
-  return sheetData.find(row => (row[COL.BARCODE] || '').trim() === c) || null;
+  return sheetData.find(row =>
+    (row[COL.BARCODE] || '').trim() === c ||
+    (row[COL.ALT_BARCODE] || '').trim() === c
+  ) || null;
 }
 
 function findBySku(code) {
@@ -237,11 +241,12 @@ function searchRows(query) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   return sheetData.filter(row =>
-    (row[COL.NAME]    || '').toLowerCase().includes(q) ||
-    (row[COL.SKU]     || '').toLowerCase().includes(q) ||
-    (row[COL.BARCODE] || '').toLowerCase().includes(q) ||
-    (row[COL.BRAND]   || '').toLowerCase().includes(q) ||
-    (row[COL.NAVER_NAME] || '').toLowerCase().includes(q)
+    (row[COL.NAME]        || '').toLowerCase().includes(q) ||
+    (row[COL.SKU]         || '').toLowerCase().includes(q) ||
+    (row[COL.BARCODE]     || '').toLowerCase().includes(q) ||
+    (row[COL.ALT_BARCODE] || '').toLowerCase().includes(q) ||
+    (row[COL.BRAND]       || '').toLowerCase().includes(q) ||
+    (row[COL.NAVER_NAME]  || '').toLowerCase().includes(q)
   );
 }
 
@@ -420,6 +425,11 @@ function openModal(row) {
   $('modal-category').textContent = row[COL.CATEGORY] || '-';
   $('modal-barcode').textContent  = row[COL.BARCODE]  || '-';
   $('modal-naver-name').textContent = row[COL.NAVER_NAME] || '-';
+
+  // 보조바코드 — 값 있을 때만 표시
+  const altBarcode = row[COL.ALT_BARCODE] || '';
+  $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
+  $('modal-alt-barcode').textContent = altBarcode;
 
   // Price
   const price = row[COL.PRICE];
