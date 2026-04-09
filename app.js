@@ -423,9 +423,13 @@ function renderSearchResults(rows) {
     return `<div class="result-item" onclick="openModalByIndex(${sheetData.indexOf(row)})">
       ${thumb}
       <div class="result-info">
-        <div class="result-name">${escHtml(row[COL.NAME] || '-')}</div>
-        <div class="result-meta">${brand ? `<span>${escHtml(brand)}</span>` : ''}${price ? `<span>${price}</span>` : ''}</div>
-        <div class="result-code">${escHtml(row[COL.SKU] || '')} ${row[COL.BARCODE] ? '· ' + escHtml(row[COL.BARCODE]) : ''}</div>
+        <div class="result-name">${escHtml(row[COL.NAME] || '-')}${row[COL.OPTION] ? `<span class="result-option"> / ${escHtml(row[COL.OPTION])}</span>` : ''}</div>
+        <div class="result-meta">
+          ${row[COL.CATEGORY] ? `<span>${escHtml(row[COL.CATEGORY])}</span>` : ''}
+          ${brand ? `<span>${escHtml(brand)}</span>` : ''}
+          ${price ? `<span>${price}</span>` : ''}
+        </div>
+        <div class="result-code">${escHtml(row[COL.SKU] || '')}${row[COL.BARCODE] ? ' · ' + escHtml(row[COL.BARCODE]) : ''}${row[COL.ALT_BARCODE] ? ' · ' + escHtml(row[COL.ALT_BARCODE]) : ''}</div>
       </div>
       <div class="result-arrow">›</div>
     </div>`;
