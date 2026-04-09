@@ -425,9 +425,7 @@ function renderSearchResults(rows) {
       <div class="result-info">
         <div class="result-name">${escHtml(row[COL.NAME] || '-')}${row[COL.OPTION] ? `<span class="result-option"> / ${escHtml(row[COL.OPTION])}</span>` : ''}</div>
         <div class="result-meta">
-          ${row[COL.CATEGORY] ? `<span>${escHtml(row[COL.CATEGORY])}</span>` : ''}
-          ${brand ? `<span>${escHtml(brand)}</span>` : ''}
-          ${price ? `<span>${price}</span>` : ''}
+          ${[row[COL.CATEGORY] ? escHtml(row[COL.CATEGORY]) : '', brand ? escHtml(brand) : '', price || ''].filter(Boolean).join(' · ')}
         </div>
         <div class="result-code">${escHtml(row[COL.SKU] || '')}${row[COL.BARCODE] ? ' · ' + escHtml(row[COL.BARCODE]) : ''}${row[COL.ALT_BARCODE] ? ' · ' + escHtml(row[COL.ALT_BARCODE]) : ''}</div>
       </div>
