@@ -403,12 +403,54 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      cursor: pointer;
+      position: relative;
     }
     .product-image-wrap img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       padding: 12px;
+      transition: opacity 0.15s;
+    }
+    .product-image-wrap:active img { opacity: 0.8; }
+    .product-image-wrap .zoom-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      pointer-events: none;
+    }
+
+    /* ── Image Zoom Overlay ── */
+    .img-zoom-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .img-zoom-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .img-zoom-overlay img {
+      max-width: 92vw;
+      max-height: 88vh;
+      object-fit: contain;
+      border-radius: 8px;
+      transform: scale(0.92);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .img-zoom-overlay.open img {
+      transform: scale(1);
     }
     .product-image-placeholder {
       font-size: 48px;
@@ -780,6 +822,11 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Image Zoom Overlay -->
+<div class="img-zoom-overlay" id="img-zoom-overlay">
+  <img id="img-zoom-img" src="" alt="" />
+</div>
 
 <!-- Google Login Screen -->
 <div id="lock-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">

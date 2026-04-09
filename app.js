@@ -215,6 +215,10 @@ function bindEvents() {
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
 
+  // Image zoom
+  $('modal-image-wrap').addEventListener('click', openZoom);
+  $('img-zoom-overlay').addEventListener('click', closeZoom);
+
   let touchStartY = 0;
   $('modal').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
   $('modal').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeModal(); }, { passive: true });
@@ -450,7 +454,7 @@ function openModal(row) {
   const imgUrl  = row[COL.IMAGE_URL] || '';
   const imgWrap = $('modal-image-wrap');
   imgWrap.innerHTML = imgUrl
-    ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" />`
+    ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" /><span class="zoom-hint">탭하여 확대 🔍</span>`
     : `<div class="product-image-placeholder">📦</div>`;
 
   $('modal-brand').textContent = row[COL.BRAND] || '';
@@ -495,6 +499,18 @@ function openModal(row) {
 function closeModal() {
   modalBg.classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ── Image Zoom
+function openZoom() {
+  const img = $('modal-image-wrap').querySelector('img');
+  if (!img) return;
+  $('img-zoom-img').src = img.src;
+  $('img-zoom-overlay').classList.add('open');
+}
+
+function closeZoom() {
+  $('img-zoom-overlay').classList.remove('open');
 }
 
 // ── Toast
