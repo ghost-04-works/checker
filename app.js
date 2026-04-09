@@ -423,17 +423,18 @@ function doSearch() {
   renderSearchResults(searchRows(q));
 }
 
-function renderSearchResults(rows, showAll = false) {
+function renderSearchResults(rows, showCount = 50) {
   const el = $('search-results');
   if (!rows.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div><div class="empty-title">결과가 없어요</div><div class="empty-desc">다른 검색어로 시도해보세요</div></div>`;
     return;
   }
-  const limited = showAll ? rows : rows.slice(0, 50);
-  const more = rows.length > 50
-    ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, true)">+ ${rows.length - 50}개 더 보기</button>`
-    : '';
   window._lastRows = rows;
+  const limited = rows.slice(0, showCount);
+  const remaining = rows.length - limited.length;
+  const footer = remaining > 0
+    ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, ${showCount + 100})">+ ${remaining}개 더 보기</button>`
+    : `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);">총 ${rows.length}개 검색됨</div>`;
   el.innerHTML = limited.map((row) => {
     const imgUrl = row[COL.IMAGE_URL] || '';
     const thumb  = imgUrl
@@ -452,7 +453,7 @@ function renderSearchResults(rows, showAll = false) {
       </div>
       <div class="result-arrow">›</div>
     </div>`;
-  }).join('') + more;
+  }).join('') + footer;
 }
 
 function openModalByIndex(idx) { openModal(sheetData[idx]); }
