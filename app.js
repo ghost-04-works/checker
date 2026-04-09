@@ -196,6 +196,7 @@ function bindEvents() {
   $('search-input').addEventListener('input', () => { if ($('search-input').value === '') renderSearchResults([]); });
   $('btn-save-config').addEventListener('click', saveConfig);
   $('btn-clear-cache').addEventListener('click', clearCache);
+  $('btn-reset-all').addEventListener('click', resetAll);
   $('btn-logout').addEventListener('click', () => { if (confirm('로그아웃하시겠어요?')) logout(); });
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
