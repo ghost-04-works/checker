@@ -26,6 +26,7 @@ const COL = {
   NAVER_URL:   11,  // L 네이버스토어 링크
   SHOPIFY_URL: 12,  // M 쇼피파이 링크
   ALT_BARCODE: 13,  // N 보조바코드
+  NOTES:       14,  // O 특이사항
 };
 
 // ── State
@@ -237,7 +238,7 @@ async function fetchSheetData(silent = false) {
     return false;
   }
 
-  const range = encodeURIComponent(`${sheetName}!A2:N`);
+  const range = encodeURIComponent(`${sheetName}!A2:O`);
   const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
 
   try {
@@ -452,9 +453,20 @@ function openModal(row) {
     ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" />`
     : `<div class="product-image-placeholder">📦</div>`;
 
-  $('modal-brand').textContent      = row[COL.BRAND]      || '';
-  $('modal-name').textContent       = row[COL.NAME]       || '-';
-  $('modal-option').textContent     = row[COL.OPTION]     || '';
+  $('modal-brand').textContent = row[COL.BRAND] || '';
+  $('modal-name').textContent  = row[COL.NAME]  || '-';
+
+  // 옵션 · 가격 작게 한 줄로
+  const option = row[COL.OPTION] || '';
+  const price  = row[COL.PRICE]  ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
+  $('modal-option').textContent = [option, price].filter(Boolean).join('  ·  ');
+
+  // 특이사항을 가격 자리에 크게 표시
+  const notes = row[COL.NOTES] || '';
+  $('modal-price').textContent  = notes;
+  $('modal-price').style.color  = notes ? 'var(--accent)' : '';
+  $('modal-price').style.fontSize = notes ? '18px' : '';
+
   $('modal-sku').textContent        = row[COL.SKU]        || '-';
   $('modal-category').textContent   = row[COL.CATEGORY]   || '-';
   $('modal-barcode').textContent    = row[COL.BARCODE]    || '-';
@@ -467,9 +479,6 @@ function openModal(row) {
   const altBarcode = row[COL.ALT_BARCODE] || '';
   $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
   $('modal-alt-barcode').textContent = altBarcode;
-
-  const price = row[COL.PRICE];
-  $('modal-price').textContent = price ? `₩${Number(price).toLocaleString()}` : '';
 
   const naverUrl   = row[COL.NAVER_URL]   || '';
   const shopifyUrl = row[COL.SHOPIFY_URL] || '';
