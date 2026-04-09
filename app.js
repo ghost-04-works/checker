@@ -456,15 +456,17 @@ function openModal(row) {
   $('modal-brand').textContent = row[COL.BRAND] || '';
   $('modal-name').textContent  = row[COL.NAME]  || '-';
 
-  // 옵션 · 가격 작게 한 줄로
-  const option = row[COL.OPTION] || '';
-  const price  = row[COL.PRICE]  ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
-  $('modal-option').textContent = [option, price].filter(Boolean).join('  ·  ');
+  // 옵션 - 크고 선명하게
+  $('modal-option').textContent = row[COL.OPTION] || '';
+
+  // 가격 - 옵션 아래 작게
+  const price = row[COL.PRICE] ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
+  $('modal-price-small').textContent = price;
 
   // 특이사항을 가격 자리에 크게 표시
   const notes = row[COL.NOTES] || '';
-  $('modal-price').textContent  = notes;
-  $('modal-price').style.color  = notes ? 'var(--accent)' : '';
+  $('modal-price').textContent    = notes;
+  $('modal-price').style.color    = notes ? 'var(--accent)' : '';
   $('modal-price').style.fontSize = notes ? '18px' : '';
 
   $('modal-sku').textContent        = row[COL.SKU]        || '-';
