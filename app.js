@@ -204,10 +204,13 @@ function bindEvents() {
   $('btn-torch').addEventListener('click', toggleTorch);
   $('btn-search-go').addEventListener('click', doSearch);
   $('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  let searchTimer;
   $('search-input').addEventListener('input', () => {
+    clearTimeout(searchTimer);
     const q = $('search-input').value.trim();
-    if (q) renderSearchResults(searchRows(q));
-    else renderSearchResults([]);
+    if (!q) { renderSearchResults([]); return; }
+    searchTimer = setTimeout(() => renderSearchResults(searchRows(q)), 150);
   });
   $('btn-save-config').addEventListener('click', saveConfig);
   $('btn-clear-cache').addEventListener('click', clearCache);
@@ -420,13 +423,18 @@ function doSearch() {
   renderSearchResults(searchRows(q));
 }
 
-function renderSearchResults(rows) {
+function renderSearchResults(rows, showAll = false) {
   const el = $('search-results');
   if (!rows.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div><div class="empty-title">결과가 없어요</div><div class="empty-desc">다른 검색어로 시도해보세요</div></div>`;
     return;
   }
-  el.innerHTML = rows.map((row) => {
+  const limited = showAll ? rows : rows.slice(0, 50);
+  const more = rows.length > 50
+    ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, true)">+ ${rows.length - 50}개 더 보기</button>`
+    : '';
+  window._lastRows = rows;
+  el.innerHTML = limited.map((row) => {
     const imgUrl = row[COL.IMAGE_URL] || '';
     const thumb  = imgUrl
       ? `<img class="result-thumb" src="${escHtml(imgUrl)}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" /><div class="result-thumb-placeholder" style="display:none">📦</div>`
@@ -444,7 +452,7 @@ function renderSearchResults(rows) {
       </div>
       <div class="result-arrow">›</div>
     </div>`;
-  }).join('');
+  }).join('') + more;
 }
 
 function openModalByIndex(idx) { openModal(sheetData[idx]); }
