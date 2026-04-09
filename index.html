@@ -492,7 +492,7 @@
     }
     .link-btn:active { opacity: 0.8; }
     .link-btn.naver { background: #03c75a; }
-    .link-btn.shopify { background: #96bf48; }
+    .link-btn.shopify { background: rgb(82, 45, 218); color: #fff; }
     .link-btn.disabled {
       background: var(--bg3);
       color: var(--text3);
@@ -752,6 +752,10 @@
         <div class="info-card full">
           <div class="info-label">네이버 스토어 제품명</div>
           <div class="info-value" id="modal-naver-name"></div>
+        </div>
+        <div class="info-card full" id="modal-naver-option-wrap" style="display:none">
+          <div class="info-label">네이버 스토어 옵션명</div>
+          <div class="info-value" id="modal-naver-option"></div>
         </div>
       </div>
       <div class="link-buttons" id="modal-links"></div>

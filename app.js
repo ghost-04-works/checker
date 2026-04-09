@@ -12,19 +12,20 @@ const SHEET_NAME = 'item';
 
 // ── Column mapping (A=0, B=1, …)
 const COL = {
-  SKU:          0,
-  CATEGORY:     1,
-  NAME:         2,
-  OPTION:       3,
-  BARCODE:      4,
-  CREATED:      5,
-  BRAND:        6,
-  PRICE:        7,
-  NAVER_NAME:   8,
-  IMAGE_URL:    9,
-  NAVER_URL:   10,
-  SHOPIFY_URL: 11,
-  ALT_BARCODE: 12,
+  SKU:          0,  // A 품목코드
+  CATEGORY:     1,  // B 카테고리
+  NAME:         2,  // C 품목명
+  OPTION:       3,  // D 옵션
+  BARCODE:      4,  // E 품목바코드
+  CREATED:      5,  // F 작성일
+  BRAND:        6,  // G 브랜드
+  PRICE:        7,  // H 가격
+  NAVER_NAME:   8,  // I 네이버 스토어 제품명
+  NAVER_OPTION: 9,  // J 네이버 스토어 옵션명
+  IMAGE_URL:   10,  // K 이미지 URL
+  NAVER_URL:   11,  // L 네이버스토어 링크
+  SHOPIFY_URL: 12,  // M 쇼피파이 링크
+  ALT_BARCODE: 13,  // N 보조바코드
 };
 
 // ── State
@@ -308,7 +309,8 @@ function searchRows(query) {
     (row[COL.BARCODE]     || '').toLowerCase().includes(q) ||
     (row[COL.ALT_BARCODE] || '').toLowerCase().includes(q) ||
     (row[COL.BRAND]       || '').toLowerCase().includes(q) ||
-    (row[COL.NAVER_NAME]  || '').toLowerCase().includes(q)
+    (row[COL.NAVER_NAME]  || '').toLowerCase().includes(q) ||
+    (row[COL.NAVER_OPTION]|| '').toLowerCase().includes(q)
   );
 }
 
@@ -445,6 +447,10 @@ function openModal(row) {
   $('modal-category').textContent   = row[COL.CATEGORY]   || '-';
   $('modal-barcode').textContent    = row[COL.BARCODE]    || '-';
   $('modal-naver-name').textContent = row[COL.NAVER_NAME] || '-';
+
+  const naverOption = row[COL.NAVER_OPTION] || '';
+  $('modal-naver-option-wrap').style.display = naverOption ? '' : 'none';
+  $('modal-naver-option').textContent = naverOption;
 
   const altBarcode = row[COL.ALT_BARCODE] || '';
   $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
