@@ -203,7 +203,11 @@ function bindEvents() {
   $('btn-torch').addEventListener('click', toggleTorch);
   $('btn-search-go').addEventListener('click', doSearch);
   $('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
-  $('search-input').addEventListener('input', () => { if ($('search-input').value === '') renderSearchResults([]); });
+  $('search-input').addEventListener('input', () => {
+    const q = $('search-input').value.trim();
+    if (q) renderSearchResults(searchRows(q));
+    else renderSearchResults([]);
+  });
   $('btn-save-config').addEventListener('click', saveConfig);
   $('btn-clear-cache').addEventListener('click', clearCache);
   $('btn-logout').addEventListener('click', () => { if (confirm('로그아웃하시겠어요?')) logout(); });
