@@ -252,16 +252,22 @@ function updateConnectionStatus(ok) {
 // ── Cache & Reset
 async function clearCache() {
   try {
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
+    // 서비스워커 해제
     if ('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map(r => r.unregister()));
     }
+    // 모든 캐시 삭제
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
     showToast('캐시 삭제 완료, 새로고침합니다...', 'success');
-    setTimeout(() => location.reload(true), 1000);
+    // 캐시 버스팅 쿼리로 강제 새로고침
+    setTimeout(() => {
+      const url = location.href.split('?')[0] + '?v=' + Date.now();
+      location.replace(url);
+    }, 800);
   } catch (e) {
     showToast('캐시 삭제 실패: ' + e.message, 'error');
   }
