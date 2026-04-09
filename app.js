@@ -4,7 +4,11 @@
 
 // ── OAuth config
 const CLIENT_ID = '666157816733-0uu1dkoda0ljjslrd479j371snkj62t7.apps.googleusercontent.com';
-const SCOPE     = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const SCOPE      = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+
+// ── Sheet config (고정값)
+const SHEET_ID   = '1UJoEBLtUXbEI9MpbS13jELTvhRwsG2jDitA56y8uIvA';
+const SHEET_NAME = 'item';
 
 // ── Column mapping (A=0, B=1, …)
 const COL = {
@@ -125,7 +129,7 @@ async function onLoginSuccess() {
   lockScreen.style.display = 'none';
   loadConfigInputs();
   updateLoginStatusUI();
-  if (cfg.get('sheet_id')) await fetchSheetData(true);
+  await fetchSheetData(true);
 }
 
 function logout() {
@@ -203,9 +207,11 @@ function bindEvents() {
 
 // ── Google Sheets fetch
 async function fetchSheetData(silent = false) {
-  const sheetId   = cfg.get('sheet_id');
-  const sheetName = cfg.get('sheet_name') || 'item';
+  
+  
 
+  const sheetId = SHEET_ID;
+  const sheetName = SHEET_NAME;
   if (!sheetId) {
     if (!silent) showToast('설정에서 스프레드시트 ID를 입력하세요', 'error');
     return false;
@@ -270,18 +276,14 @@ function resetAll() {
 
 // ── Config
 function loadConfigInputs() {
-  if ($('cfg-sheet-id'))   $('cfg-sheet-id').value   = cfg.get('sheet_id');
-  if ($('cfg-sheet-name')) $('cfg-sheet-name').value = cfg.get('sheet_name') || 'item';
 }
 
 async function saveConfig() {
-  cfg.set('sheet_id',   $('cfg-sheet-id').value.trim());
-  cfg.set('sheet_name', $('cfg-sheet-name').value.trim() || 'item');
-  $('config-status').textContent = '연결 테스트 중...';
+  $('config-status').textContent = '불러오는 중...';
   const ok = await fetchSheetData();
   $('config-status').textContent = ok
-    ? `✅ 연결 성공 – ${sheetData.length}개 품목`
-    : '❌ 연결 실패 – 스프레드시트 ID를 확인하세요';
+    ? `✅ ${sheetData.length}개 품목 로드됨`
+    : '❌ 연결 실패';
 }
 
 // ── Barcode lookup
