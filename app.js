@@ -55,8 +55,11 @@ window.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   updateConnectionStatus(false);
 
+  // 기존 서비스워커 모두 해제 (캐시 문제 방지)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
   }
 
   waitForGIS(() => {
@@ -196,7 +199,6 @@ function bindEvents() {
   $('search-input').addEventListener('input', () => { if ($('search-input').value === '') renderSearchResults([]); });
   $('btn-save-config').addEventListener('click', saveConfig);
   $('btn-clear-cache').addEventListener('click', clearCache);
-  $('btn-reset-all').addEventListener('click', resetAll);
   $('btn-logout').addEventListener('click', () => { if (confirm('로그아웃하시겠어요?')) logout(); });
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
@@ -253,18 +255,11 @@ function updateConnectionStatus(ok) {
 // ── Cache & Reset
 async function clearCache() {
   try {
-    // 서비스워커 해제
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-    // 모든 캐시 삭제
     if ('caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
     showToast('캐시 삭제 완료, 새로고침합니다...', 'success');
-    // 캐시 버스팅 쿼리로 강제 새로고침
     setTimeout(() => {
       const url = location.href.split('?')[0] + '?v=' + Date.now();
       location.replace(url);
