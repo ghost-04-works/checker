@@ -259,13 +259,10 @@ async function clearCache() {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
-    showToast('캐시 삭제 완료, 새로고침합니다...', 'success');
-    setTimeout(() => {
-      const url = location.href.split('?')[0] + '?v=' + Date.now();
-      location.replace(url);
-    }, 800);
+    // index.html 자체도 캐시 우회해서 새로 받아옴
+    window.location.href = location.pathname + '?v=' + Date.now();
   } catch (e) {
-    showToast('캐시 삭제 실패: ' + e.message, 'error');
+    window.location.href = location.pathname + '?v=' + Date.now();
   }
 }
 
