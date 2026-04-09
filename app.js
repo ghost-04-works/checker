@@ -51,11 +51,11 @@ const toast      = $('toast');
 const lockScreen = $('lock-screen');
 
 // ── Boot
-window.addEventListener('DOMContentLoaded', () => {
+function init() {
   bindEvents();
   updateConnectionStatus(false);
 
-  // 기존 서비스워커 모두 해제 (캐시 문제 방지)
+  // 기존 서비스워커 모두 해제
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       regs.forEach(r => r.unregister());
@@ -80,7 +80,14 @@ window.addEventListener('DOMContentLoaded', () => {
       lockScreen.style.display = 'flex';
     }
   });
-});
+}
+
+// 동적 로드 시 DOMContentLoaded가 이미 지났을 수 있으므로 양쪽 처리
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 function waitForGIS(cb) {
   if (typeof google !== 'undefined' && google.accounts) cb();
