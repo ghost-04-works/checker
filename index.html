@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
       --bg: #0a0a0a;
@@ -690,11 +691,6 @@
   <div class="config-section">
     <div class="config-section-title">Google Sheets 연동</div>
     <div class="config-row">
-      <div class="config-label">API Key</div>
-      <div class="config-desc">Google Cloud Console에서 발급받은 API 키</div>
-      <input class="config-input" id="cfg-api-key" type="password" placeholder="AIza..." autocomplete="off" />
-    </div>
-    <div class="config-row">
       <div class="config-label">Spreadsheet ID</div>
       <div class="config-desc">스프레드시트 URL 중간의 ID 값</div>
       <input class="config-input" id="cfg-sheet-id" type="text" placeholder="1UJoEB..." autocomplete="off" />
@@ -706,11 +702,11 @@
     </div>
   </div>
   <div class="config-section">
-    <div class="config-section-title">보안</div>
+    <div class="config-section-title">계정</div>
     <div class="config-row">
-      <div class="config-label">접근 비밀번호</div>
-      <div class="config-desc">앱 실행 시 요구할 비밀번호 (선택)</div>
-      <input class="config-input" id="cfg-password" type="password" placeholder="비워두면 잠금 없음" autocomplete="new-password" />
+      <div class="config-label">로그인 상태</div>
+      <div class="config-desc" id="login-status-desc">확인 중...</div>
+      <button class="btn btn-secondary" id="btn-logout" style="margin-top:4px;border-color:var(--red);color:var(--red);">로그아웃</button>
     </div>
   </div>
   <button class="btn btn-primary" id="btn-save-config" style="width:100%">설정 저장 및 연결 테스트</button>
@@ -775,8 +771,8 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Password Lock -->
-<div id="lock-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;">
+<!-- Google Login Screen -->
+<div id="lock-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
   <svg width="52" height="52" viewBox="0 0 596 842" xmlns="http://www.w3.org/2000/svg" style="fill:var(--text);margin-bottom:4px;" fill-rule="evenodd" clip-rule="evenodd">
     <g transform="translate(-9.3635,-817.6605)">
       <path d="M485.655,1233.52L412.764,1306.41L485.655,1306.41L485.655,1233.52Z"/>
@@ -785,10 +781,14 @@
     </g>
   </svg>
   <div style="font-family:'Space Mono',monospace;font-size:24px;font-weight:700;">Geon<span style="color:var(--accent)">.</span>checker</div>
-  <div style="font-size:13px;color:var(--text2);">비밀번호를 입력하세요</div>
-  <input id="lock-input" type="password" class="config-input" style="max-width:240px;text-align:center;font-size:18px;letter-spacing:4px;" placeholder="••••" />
-  <button class="btn btn-primary" id="lock-submit" style="width:100px;flex:none;padding:10px 16px;">확인</button>
-  <div id="lock-error" style="font-size:13px;color:var(--red);min-height:18px;"></div>
+  <div style="font-size:13px;color:var(--text2);text-align:center;line-height:1.6;">
+    GEONWORKS 계정으로 로그인하세요
+  </div>
+  <button class="btn btn-primary" id="lock-submit" style="flex:none;gap:10px;padding:13px 24px;font-size:15px;" onclick="startGoogleLogin()">
+    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>
+    Google 로그인
+  </button>
+  <div id="lock-error" style="font-size:13px;color:var(--red);min-height:18px;text-align:center;"></div>
 </div>
 
 <script src="app.js"></script>

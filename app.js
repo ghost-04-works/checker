@@ -1,28 +1,35 @@
 /* ─────────────────────────────────────────────
-   GW.checker  –  app.js
+   Geon.checker  –  app.js  (OAuth 2.0)
    ───────────────────────────────────────────── */
+
+// ── OAuth config
+const CLIENT_ID = '666157816733-0uu1dkoda0ljjslrd479j371snkj62t7.apps.googleusercontent.com';
+const SCOPE     = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 
 // ── Column mapping (A=0, B=1, …)
 const COL = {
-  SKU:          0,  // A 품목코드
-  CATEGORY:     1,  // B 카테고리
-  NAME:         2,  // C 품목명
-  OPTION:       3,  // D 옵션
-  BARCODE:      4,  // E 품목바코드
-  CREATED:      5,  // F 작성일
-  BRAND:        6,  // G 브랜드
-  PRICE:        7,  // H 가격
-  NAVER_NAME:   8,  // I 네이버 스토어 제품명
-  IMAGE_URL:    9,  // J 이미지 URL
-  NAVER_URL:   10,  // K 네이버스토어 링크
-  SHOPIFY_URL: 11,  // L 쇼피파이 링크
-  ALT_BARCODE: 12,  // M 보조바코드
+  SKU:          0,
+  CATEGORY:     1,
+  NAME:         2,
+  OPTION:       3,
+  BARCODE:      4,
+  CREATED:      5,
+  BRAND:        6,
+  PRICE:        7,
+  NAVER_NAME:   8,
+  IMAGE_URL:    9,
+  NAVER_URL:   10,
+  SHOPIFY_URL: 11,
+  ALT_BARCODE: 12,
 };
 
 // ── State
-let sheetData = [];
-let scanning  = false;
-let torchOn   = false;
+let sheetData   = [];
+let scanning    = false;
+let torchOn     = false;
+let accessToken = null;
+let tokenClient = null;
+let tokenExpiry = 0;
 
 // ── Config helpers
 const cfg = {
@@ -31,62 +38,137 @@ const cfg = {
 };
 
 // ── DOM refs
-const $  = id => document.getElementById(id);
-const tabs        = document.querySelectorAll('.tab');
-const views       = { scanner: $('scanner-view'), search: $('search-view'), config: $('config-view') };
-const modalBg     = $('modal-backdrop');
-const toast       = $('toast');
-const lockScreen  = $('lock-screen');
+const $    = id => document.getElementById(id);
+const tabs = document.querySelectorAll('.tab');
+const views = { scanner: $('scanner-view'), search: $('search-view'), config: $('config-view') };
+const modalBg    = $('modal-backdrop');
+const toast      = $('toast');
+const lockScreen = $('lock-screen');
 
 // ── Boot
 window.addEventListener('DOMContentLoaded', () => {
-  loadConfigInputs();
-  checkLock();
   bindEvents();
   updateConnectionStatus(false);
 
-  // Auto-load data if configured
-  if (cfg.get('api_key') && cfg.get('sheet_id')) {
-    fetchSheetData();
-  }
-
-  // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+
+  waitForGIS(() => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+      callback: onTokenReceived,
+      error_callback: onTokenError,
+    });
+
+    const saved = sessionStorage.getItem('gw_token');
+    const exp   = parseInt(sessionStorage.getItem('gw_token_exp') || '0');
+    if (saved && Date.now() < exp) {
+      accessToken = saved;
+      tokenExpiry = exp;
+      onLoginSuccess();
+    } else {
+      lockScreen.style.display = 'flex';
+    }
+  });
 });
 
-// ── Lock screen
-function checkLock() {
-  const pw = cfg.get('password');
-  if (!pw) {
-    lockScreen.style.display = 'none';
-    return;
-  }
-  const unlocked = sessionStorage.getItem('gw_unlocked');
-  if (unlocked === '1') {
-    lockScreen.style.display = 'none';
-    return;
-  }
-  lockScreen.style.display = 'flex';
-  $('lock-input').focus();
+function waitForGIS(cb) {
+  if (typeof google !== 'undefined' && google.accounts) cb();
+  else setTimeout(() => waitForGIS(cb), 100);
 }
 
-$('lock-submit').addEventListener('click', tryUnlock);
-$('lock-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
-
-function tryUnlock() {
-  const pw = cfg.get('password');
-  const val = $('lock-input').value;
-  if (val === pw) {
-    sessionStorage.setItem('gw_unlocked', '1');
-    lockScreen.style.display = 'none';
+// ── OAuth
+function startGoogleLogin() {
+  $('lock-error').textContent = '';
+  $('lock-submit').textContent = '로그인 중...';
+  $('lock-submit').disabled = true;
+  if (tokenClient) {
+    tokenClient.requestAccessToken({ prompt: '' });
   } else {
-    $('lock-error').textContent = '비밀번호가 틀렸어요';
-    $('lock-input').value = '';
-    $('lock-input').focus();
-    setTimeout(() => { $('lock-error').textContent = ''; }, 2000);
+    waitForGIS(() => {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPE,
+        callback: onTokenReceived,
+        error_callback: onTokenError,
+      });
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
   }
+}
+
+function onTokenReceived(tokenResponse) {
+  if (tokenResponse.error) { onTokenError(tokenResponse); return; }
+  accessToken = tokenResponse.access_token;
+  tokenExpiry = Date.now() + (tokenResponse.expires_in - 60) * 1000;
+  sessionStorage.setItem('gw_token', accessToken);
+  sessionStorage.setItem('gw_token_exp', tokenExpiry.toString());
+  onLoginSuccess();
+}
+
+function onTokenError(err) {
+  const msg = err.error === 'access_denied'
+    ? '접근이 거부됐어요. 조직 계정으로 로그인해 주세요.'
+    : '로그인에 실패했어요. 다시 시도해 주세요.';
+  $('lock-error').textContent = msg;
+  resetLoginButton();
+}
+
+function resetLoginButton() {
+  $('lock-submit').innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg> Google 로그인`;
+  $('lock-submit').disabled = false;
+}
+
+async function onLoginSuccess() {
+  lockScreen.style.display = 'none';
+  loadConfigInputs();
+  updateLoginStatusUI();
+  if (cfg.get('sheet_id')) await fetchSheetData(true);
+}
+
+function logout() {
+  if (accessToken && typeof google !== 'undefined') {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  accessToken = null;
+  tokenExpiry = 0;
+  sessionStorage.removeItem('gw_token');
+  sessionStorage.removeItem('gw_token_exp');
+  sheetData = [];
+  updateConnectionStatus(false);
+  resetLoginButton();
+  $('lock-error').textContent = '';
+  lockScreen.style.display = 'flex';
+  showToast('로그아웃됐어요', '');
+}
+
+function updateLoginStatusUI() {
+  const el = $('login-status-desc');
+  if (!el) return;
+  if (accessToken && Date.now() < tokenExpiry) {
+    el.textContent = '✅ 로그인됨';
+    el.style.color = 'var(--accent)';
+  } else {
+    el.textContent = '로그인 필요';
+    el.style.color = 'var(--text2)';
+  }
+}
+
+async function ensureToken() {
+  if (accessToken && Date.now() < tokenExpiry) return true;
+  return new Promise((resolve) => {
+    tokenClient.callback = (resp) => {
+      if (resp.error) { resolve(false); return; }
+      accessToken = resp.access_token;
+      tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
+      sessionStorage.setItem('gw_token', accessToken);
+      sessionStorage.setItem('gw_token_exp', tokenExpiry.toString());
+      resolve(true);
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
 }
 
 // ── Tab switching
@@ -96,66 +178,50 @@ function bindEvents() {
       const name = tab.dataset.tab;
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      Object.entries(views).forEach(([k, v]) => {
-        v.classList.toggle('active', k === name);
-      });
+      Object.entries(views).forEach(([k, v]) => v.classList.toggle('active', k === name));
       if (name !== 'scanner' && scanning) stopScanner();
+      if (name === 'config') updateLoginStatusUI();
     });
   });
 
-  // Scanner
-  $('btn-scan').addEventListener('click', () => {
-    if (scanning) stopScanner();
-    else startScanner();
-  });
-
+  $('btn-scan').addEventListener('click', () => { if (scanning) stopScanner(); else startScanner(); });
   $('btn-torch').addEventListener('click', toggleTorch);
-
-  // Search
   $('btn-search-go').addEventListener('click', doSearch);
   $('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
-  $('search-input').addEventListener('input', () => {
-    if ($('search-input').value === '') renderSearchResults([]);
-  });
-
-  // Config save
+  $('search-input').addEventListener('input', () => { if ($('search-input').value === '') renderSearchResults([]); });
   $('btn-save-config').addEventListener('click', saveConfig);
-
-  // Cache clear
   $('btn-clear-cache').addEventListener('click', clearCache);
-
-  // Full reset
   $('btn-reset-all').addEventListener('click', resetAll);
-
-  // Modal close
+  $('btn-logout').addEventListener('click', () => { if (confirm('로그아웃하시겠어요?')) logout(); });
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
 
-  // Swipe down to close modal
   let touchStartY = 0;
   $('modal').addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
-  $('modal').addEventListener('touchend', e => {
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    if (dy > 80) closeModal();
-  }, { passive: true });
+  $('modal').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeModal(); }, { passive: true });
 }
 
 // ── Google Sheets fetch
 async function fetchSheetData(silent = false) {
-  const apiKey  = cfg.get('api_key');
-  const sheetId = cfg.get('sheet_id');
+  const sheetId   = cfg.get('sheet_id');
   const sheetName = cfg.get('sheet_name') || 'item';
 
-  if (!apiKey || !sheetId) {
-    if (!silent) showToast('설정에서 API 키와 스프레드시트 ID를 먼저 입력하세요', 'error');
+  if (!sheetId) {
+    if (!silent) showToast('설정에서 스프레드시트 ID를 입력하세요', 'error');
+    return false;
+  }
+
+  const ok = await ensureToken();
+  if (!ok) {
+    if (!silent) showToast('로그인이 필요해요', 'error');
     return false;
   }
 
   const range = encodeURIComponent(`${sheetName}!A2:M`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error?.message || `HTTP ${res.status}`);
@@ -196,7 +262,7 @@ async function clearCache() {
 }
 
 function resetAll() {
-  if (!confirm('설정(API 키, 비밀번호 등)이 모두 삭제됩니다.\n계속하시겠어요?')) return;
+  if (!confirm('설정이 모두 삭제됩니다.\n계속하시겠어요?')) return;
   localStorage.clear();
   sessionStorage.clear();
   clearCache();
@@ -204,30 +270,25 @@ function resetAll() {
 
 // ── Config
 function loadConfigInputs() {
-  $('cfg-api-key').value   = cfg.get('api_key');
-  $('cfg-sheet-id').value  = cfg.get('sheet_id');
-  $('cfg-sheet-name').value = cfg.get('sheet_name') || 'item';
-  $('cfg-password').value  = cfg.get('password');
+  if ($('cfg-sheet-id'))   $('cfg-sheet-id').value   = cfg.get('sheet_id');
+  if ($('cfg-sheet-name')) $('cfg-sheet-name').value = cfg.get('sheet_name') || 'item';
 }
 
 async function saveConfig() {
-  cfg.set('api_key',    $('cfg-api-key').value.trim());
   cfg.set('sheet_id',   $('cfg-sheet-id').value.trim());
   cfg.set('sheet_name', $('cfg-sheet-name').value.trim() || 'item');
-  cfg.set('password',   $('cfg-password').value);
-
   $('config-status').textContent = '연결 테스트 중...';
   const ok = await fetchSheetData();
   $('config-status').textContent = ok
     ? `✅ 연결 성공 – ${sheetData.length}개 품목`
-    : '❌ 연결 실패 – API 키 또는 ID를 확인하세요';
+    : '❌ 연결 실패 – 스프레드시트 ID를 확인하세요';
 }
 
 // ── Barcode lookup
 function findByBarcode(code) {
   const c = code.trim();
   return sheetData.find(row =>
-    (row[COL.BARCODE] || '').trim() === c ||
+    (row[COL.BARCODE]     || '').trim() === c ||
     (row[COL.ALT_BARCODE] || '').trim() === c
   ) || null;
 }
@@ -258,11 +319,9 @@ async function startScanner() {
     const ok = await fetchSheetData();
     if (!ok) return;
   }
-
   try {
     $('qr-reader').innerHTML = '';
     html5QrCode = new Html5Qrcode('qr-reader');
-
     const config = {
       fps: 15,
       qrbox: { width: 260, height: 160 },
@@ -279,27 +338,17 @@ async function startScanner() {
         Html5QrcodeSupportedFormats.DATA_MATRIX,
       ],
     };
-
     await html5QrCode.start(
       { facingMode: 'environment' },
       config,
       (decodedText) => handleScanResult(decodedText),
       () => {}
     );
-
-    // 라이브러리가 생성한 video 스타일 정리
     const video = $('qr-reader').querySelector('video');
-    if (video) {
-      video.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;border-radius:0;';
-    }
-    // 라이브러리 기본 UI 숨김
-    const defaultUi = $('qr-reader').querySelector('div[style]');
-    if (defaultUi) defaultUi.style.border = 'none';
-
+    if (video) video.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;border-radius:0;';
     scanning = true;
     $('btn-scan').textContent = '스캔 중지';
     $('btn-scan').style.background = 'var(--red)';
-
   } catch (e) {
     let msg = String(e.message || e);
     if (/permission|notallowed/i.test(msg)) msg = '카메라 권한을 허용해 주세요';
@@ -315,32 +364,10 @@ async function stopScanner() {
   }
   $('qr-reader').innerHTML = '';
   scanning = false;
-  torchOn = false;
+  torchOn  = false;
   $('btn-scan').textContent = '카메라 시작';
   $('btn-scan').style.background = '';
   $('btn-torch').style.display = 'none';
-}
-
-function handleScanResult(code) {
-  // Debounce: ignore repeated scans of same code within 2s
-  if (handleScanResult._last === code && Date.now() - handleScanResult._time < 2000) return;
-  handleScanResult._last = code;
-  handleScanResult._time = Date.now();
-
-  // Flash
-  $('scanner-container').classList.add('scan-success');
-  setTimeout(() => $('scanner-container').classList.remove('scan-success'), 400);
-
-  // Vibrate
-  if (navigator.vibrate) navigator.vibrate(50);
-
-  // Find product
-  const row = findByBarcode(code) || findBySku(code);
-  if (row) {
-    openModal(row);
-  } else {
-    showToast(`인식: ${code} — 등록된 제품 없음`, 'error');
-  }
 }
 
 async function toggleTorch() {
@@ -355,46 +382,44 @@ async function toggleTorch() {
   }
 }
 
+function handleScanResult(code) {
+  if (handleScanResult._last === code && Date.now() - handleScanResult._time < 2000) return;
+  handleScanResult._last = code;
+  handleScanResult._time = Date.now();
+  $('scanner-container').classList.add('scan-success');
+  setTimeout(() => $('scanner-container').classList.remove('scan-success'), 400);
+  if (navigator.vibrate) navigator.vibrate(50);
+  const row = findByBarcode(code) || findBySku(code);
+  if (row) openModal(row);
+  else showToast(`인식: ${code} — 등록된 제품 없음`, 'error');
+}
+
 // ── Search
 function doSearch() {
   const q = $('search-input').value.trim();
   if (!q) return;
-
-  if (!sheetData.length) {
-    fetchSheetData().then(() => renderSearchResults(searchRows(q)));
-    return;
-  }
+  if (!sheetData.length) { fetchSheetData().then(() => renderSearchResults(searchRows(q))); return; }
   renderSearchResults(searchRows(q));
 }
 
 function renderSearchResults(rows) {
   const el = $('search-results');
   if (!rows.length) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">😶</div>
-      <div class="empty-title">결과가 없어요</div>
-      <div class="empty-desc">다른 검색어로 시도해보세요</div>
-    </div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">😶</div><div class="empty-title">결과가 없어요</div><div class="empty-desc">다른 검색어로 시도해보세요</div></div>`;
     return;
   }
-
-  el.innerHTML = rows.map((row, i) => {
+  el.innerHTML = rows.map((row) => {
     const imgUrl = row[COL.IMAGE_URL] || '';
-    const thumb = imgUrl
+    const thumb  = imgUrl
       ? `<img class="result-thumb" src="${escHtml(imgUrl)}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" /><div class="result-thumb-placeholder" style="display:none">📦</div>`
       : `<div class="result-thumb-placeholder">📦</div>`;
-
     const price = row[COL.PRICE] ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
     const brand = row[COL.BRAND] || '';
-
-    return `<div class="result-item" data-idx="${i}" onclick="openModalByIndex(${sheetData.indexOf(row)})">
+    return `<div class="result-item" onclick="openModalByIndex(${sheetData.indexOf(row)})">
       ${thumb}
       <div class="result-info">
         <div class="result-name">${escHtml(row[COL.NAME] || '-')}</div>
-        <div class="result-meta">
-          ${brand ? `<span>${escHtml(brand)}</span>` : ''}
-          ${price ? `<span>${price}</span>` : ''}
-        </div>
+        <div class="result-meta">${brand ? `<span>${escHtml(brand)}</span>` : ''}${price ? `<span>${price}</span>` : ''}</div>
         <div class="result-code">${escHtml(row[COL.SKU] || '')} ${row[COL.BARCODE] ? '· ' + escHtml(row[COL.BARCODE]) : ''}</div>
       </div>
       <div class="result-arrow">›</div>
@@ -402,60 +427,37 @@ function renderSearchResults(rows) {
   }).join('');
 }
 
-function openModalByIndex(idx) {
-  openModal(sheetData[idx]);
-}
+function openModalByIndex(idx) { openModal(sheetData[idx]); }
 
 // ── Modal
 function openModal(row) {
-  // Image
-  const imgUrl = row[COL.IMAGE_URL] || '';
+  const imgUrl  = row[COL.IMAGE_URL] || '';
   const imgWrap = $('modal-image-wrap');
-  if (imgUrl) {
-    imgWrap.innerHTML = `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" />`;
-  } else {
-    imgWrap.innerHTML = `<div class="product-image-placeholder">📦</div>`;
-  }
+  imgWrap.innerHTML = imgUrl
+    ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" />`
+    : `<div class="product-image-placeholder">📦</div>`;
 
-  // Basic info
-  $('modal-brand').textContent    = row[COL.BRAND] || '';
-  $('modal-name').textContent     = row[COL.NAME]  || '-';
-  $('modal-option').textContent   = row[COL.OPTION] || '';
-  $('modal-sku').textContent      = row[COL.SKU]    || '-';
-  $('modal-category').textContent = row[COL.CATEGORY] || '-';
-  $('modal-barcode').textContent  = row[COL.BARCODE]  || '-';
+  $('modal-brand').textContent      = row[COL.BRAND]      || '';
+  $('modal-name').textContent       = row[COL.NAME]       || '-';
+  $('modal-option').textContent     = row[COL.OPTION]     || '';
+  $('modal-sku').textContent        = row[COL.SKU]        || '-';
+  $('modal-category').textContent   = row[COL.CATEGORY]   || '-';
+  $('modal-barcode').textContent    = row[COL.BARCODE]    || '-';
   $('modal-naver-name').textContent = row[COL.NAVER_NAME] || '-';
 
-  // 보조바코드 — 값 있을 때만 표시
   const altBarcode = row[COL.ALT_BARCODE] || '';
   $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
   $('modal-alt-barcode').textContent = altBarcode;
 
-  // Price
   const price = row[COL.PRICE];
   $('modal-price').textContent = price ? `₩${Number(price).toLocaleString()}` : '';
 
-  // Links
   const naverUrl   = row[COL.NAVER_URL]   || '';
   const shopifyUrl = row[COL.SHOPIFY_URL] || '';
-
   $('modal-links').innerHTML = `
-    ${naverUrl
-      ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener">
-           <span class="link-btn-icon">🛒</span> 네이버 스토어
-           <span class="link-btn-arrow">↗</span>
-         </a>`
-      : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`
-    }
-    ${shopifyUrl
-      ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener">
-           <span class="link-btn-icon">🛍</span> Shopify
-           <span class="link-btn-arrow">↗</span>
-         </a>`
-      : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`
-    }
+    ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
+    ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
   `;
-
   modalBg.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -476,9 +478,5 @@ function showToast(msg, type = '') {
 
 // ── Util
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
