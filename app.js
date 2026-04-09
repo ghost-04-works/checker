@@ -432,9 +432,9 @@ function renderSearchResults(rows, showCount = 50) {
   window._lastRows = rows;
   const limited   = rows.slice(0, showCount);
   const remaining = rows.length - limited.length;
-  const loadMore  = Math.min(100, remaining);
+  const loadMore  = Math.min(50, remaining);
   const footer = remaining > 0
-    ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, ${showCount + 100})">+ ${loadMore}개 더 보기 (${remaining}개 남음)</button>`
+    ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, ${showCount + 50})">+ ${loadMore}개 더 보기 (${remaining}개 남음)</button>`
     : `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);">총 ${rows.length}개 검색됨</div>`;
   el.innerHTML = limited.map((row) => {
     const imgUrl = row[COL.IMAGE_URL] || '';
