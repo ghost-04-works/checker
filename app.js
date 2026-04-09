@@ -21,9 +21,7 @@ const COL = {
 // ── State
 let sheetData = [];
 let scanning  = false;
-let codeReader = null;
 let torchOn   = false;
-let currentStream = null;
 
 // ── Config helpers
 const cfg = {
@@ -248,6 +246,8 @@ function searchRows(query) {
 }
 
 // ── Scanner
+let html5QrCode = null;
+
 async function startScanner() {
   if (!sheetData.length) {
     const ok = await fetchSheetData();
@@ -255,54 +255,60 @@ async function startScanner() {
   }
 
   try {
-    codeReader = new ZXing.BrowserMultiFormatReader();
-    const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+    $('qr-reader').innerHTML = '';
+    html5QrCode = new Html5Qrcode('qr-reader');
 
-    // prefer back camera
-    const cam = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
-    if (!cam) throw new Error('카메라를 찾을 수 없어요');
-
-    const constraints = {
-      video: {
-        deviceId: cam.deviceId,
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      }
+    const config = {
+      fps: 15,
+      qrbox: { width: 260, height: 160 },
+      aspectRatio: window.innerHeight / window.innerWidth,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.DATA_MATRIX,
+      ],
     };
 
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    $('video').srcObject = currentStream;
-    await $('video').play();
+    await html5QrCode.start(
+      { facingMode: 'environment' },
+      config,
+      (decodedText) => handleScanResult(decodedText),
+      () => {}
+    );
 
-    // Check torch support
-    const track = currentStream.getVideoTracks()[0];
-    const caps = track.getCapabilities ? track.getCapabilities() : {};
-    if (caps.torch) $('btn-torch').style.display = 'inline-flex';
+    // 라이브러리가 생성한 video 스타일 정리
+    const video = $('qr-reader').querySelector('video');
+    if (video) {
+      video.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;border-radius:0;';
+    }
+    // 라이브러리 기본 UI 숨김
+    const defaultUi = $('qr-reader').querySelector('div[style]');
+    if (defaultUi) defaultUi.style.border = 'none';
 
     scanning = true;
     $('btn-scan').textContent = '스캔 중지';
     $('btn-scan').style.background = 'var(--red)';
 
-    codeReader.decodeFromStream(currentStream, $('video'), (result, err) => {
-      if (result) {
-        const code = result.getText();
-        handleScanResult(code);
-      }
-    });
-
   } catch (e) {
-    showToast('카메라 오류: ' + e.message, 'error');
+    let msg = String(e.message || e);
+    if (/permission|notallowed/i.test(msg)) msg = '카메라 권한을 허용해 주세요';
+    else if (/notfound|devices/i.test(msg)) msg = '카메라를 찾을 수 없어요';
+    showToast('카메라 오류: ' + msg, 'error');
   }
 }
 
-function stopScanner() {
-  if (codeReader) { codeReader.reset(); codeReader = null; }
-  if (currentStream) {
-    currentStream.getTracks().forEach(t => t.stop());
-    currentStream = null;
+async function stopScanner() {
+  if (html5QrCode) {
+    try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {}
+    html5QrCode = null;
   }
-  $('video').srcObject = null;
+  $('qr-reader').innerHTML = '';
   scanning = false;
   torchOn = false;
   $('btn-scan').textContent = '카메라 시작';
@@ -333,11 +339,15 @@ function handleScanResult(code) {
 }
 
 async function toggleTorch() {
-  if (!currentStream) return;
-  const track = currentStream.getVideoTracks()[0];
-  torchOn = !torchOn;
-  await track.applyConstraints({ advanced: [{ torch: torchOn }] });
-  $('btn-torch').textContent = torchOn ? '🔦' : '💡';
+  if (!html5QrCode) return;
+  try {
+    torchOn = !torchOn;
+    await html5QrCode.applyVideoConstraints({ advanced: [{ torch: torchOn }] });
+    $('btn-torch').textContent = torchOn ? '🔦' : '💡';
+  } catch (e) {
+    showToast('플래시를 지원하지 않는 기기예요', 'error');
+    torchOn = false;
+  }
 }
 
 // ── Search
