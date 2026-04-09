@@ -1,4 +1,4 @@
-const CACHE = 'gw-checker-v4';
+const CACHE = 'gw-checker-v5';
 
 // App shell files - always try network first
 const APP_SHELL = [

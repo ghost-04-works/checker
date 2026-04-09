@@ -223,7 +223,7 @@ async function fetchSheetData(silent = false) {
     return false;
   }
 
-  const range = encodeURIComponent(`${sheetName}!A2:M`);
+  const range = encodeURIComponent(`${sheetName}!A2:N`);
   const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
 
   try {
