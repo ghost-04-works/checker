@@ -18,15 +18,16 @@ const COL = {
   OPTION:       3,  // D 옵션
   BARCODE:      4,  // E 품목바코드
   CREATED:      5,  // F 작성일
-  BRAND:        6,  // G 브랜드
-  PRICE:        7,  // H 가격
-  NAVER_NAME:   8,  // I 네이버 스토어 제품명
-  NAVER_OPTION: 9,  // J 네이버 스토어 옵션명
-  IMAGE_URL:   10,  // K 이미지 URL
-  NAVER_URL:   11,  // L 네이버스토어 링크
-  SHOPIFY_URL: 12,  // M 쇼피파이 링크
-  ALT_BARCODE: 13,  // N 보조바코드
-  NOTES:       14,  // O 특이사항
+  LOCATION:     6,  // G 위치코드
+  BRAND:        7,  // H 브랜드
+  PRICE:        8,  // I 가격
+  NAVER_NAME:   9,  // J 네이버 스토어 제품명
+  NAVER_OPTION: 10, // K 네이버 스토어 옵션명
+  IMAGE_URL:    11, // L 이미지 URL
+  NAVER_URL:    12, // M 네이버스토어 링크
+  SHOPIFY_URL:  13, // N 쇼피파이 링크
+  ALT_BARCODE:  14, // O 보조바코드
+  NOTES:        15, // P 특이사항
 };
 
 // ── State
@@ -245,7 +246,7 @@ async function fetchSheetData(silent = false) {
     return false;
   }
 
-  const range = encodeURIComponent(`${sheetName}!A2:O`);
+  const range = encodeURIComponent(`${sheetName}!A2:P`);
   const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
 
   try {
@@ -467,7 +468,10 @@ function openModal(row) {
     ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" /><span class="zoom-hint">탭하여 확대 🔍</span>`
     : `<div class="product-image-placeholder">📦</div>`;
 
-  $('modal-brand').textContent = row[COL.BRAND] || '';
+  const category = row[COL.CATEGORY] || '';
+  const brand    = row[COL.BRAND]    || '';
+  const brandLine = [category, brand].filter(Boolean).join(' / ');
+  $('modal-brand').textContent = brandLine;
   $('modal-name').textContent  = row[COL.NAME]  || '-';
 
   // 옵션 - 크고 선명하게
@@ -483,9 +487,9 @@ function openModal(row) {
   $('modal-price').style.color    = notes ? 'var(--accent)' : '';
   $('modal-price').style.fontSize = notes ? '18px' : '';
 
-  $('modal-sku').textContent        = row[COL.SKU]        || '-';
-  $('modal-category').textContent   = row[COL.CATEGORY]   || '-';
-  $('modal-barcode').textContent    = row[COL.BARCODE]    || '-';
+  $('modal-sku').textContent      = row[COL.SKU]      || '-';
+  $('modal-location').textContent = row[COL.LOCATION] || '-';
+  $('modal-barcode').textContent  = row[COL.BARCODE]  || '-';
   $('modal-naver-name').textContent = row[COL.NAVER_NAME] || '-';
 
   const naverOption = row[COL.NAVER_OPTION] || '';
@@ -493,7 +497,8 @@ function openModal(row) {
   $('modal-naver-option').textContent = naverOption;
 
   const altBarcode = row[COL.ALT_BARCODE] || '';
-  $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
+  const altWrap = $('modal-alt-barcode-wrap');
+  altWrap.style.display = altBarcode ? '' : 'none';
   $('modal-alt-barcode').textContent = altBarcode;
 
   const naverUrl   = row[COL.NAVER_URL]   || '';
