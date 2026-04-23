@@ -328,6 +328,7 @@ function searchRows(query) {
     (row[COL.BARCODE]     || '').toLowerCase().includes(q) ||
     (row[COL.ALT_BARCODE] || '').toLowerCase().includes(q) ||
     (row[COL.BRAND]       || '').toLowerCase().includes(q) ||
+    (row[COL.OPTION]      || '').toLowerCase().includes(q) ||
     (row[COL.NAVER_NAME]  || '').toLowerCase().includes(q) ||
     (row[COL.NAVER_OPTION]|| '').toLowerCase().includes(q)
   );
