@@ -447,7 +447,7 @@ function renderSearchResults(rows, showCount = 50) {
     return `<div class="result-item" onclick="openModalByIndex(${sheetData.indexOf(row)})">
       ${thumb}
       <div class="result-info">
-        <div class="result-name">${escHtml(row[COL.NAME] || '-')}${row[COL.OPTION] ? `<span class="result-option"> / ${escHtml(row[COL.OPTION])}</span>` : ''}</div>
+        <div class="result-name">${escHtml(row[COL.NAME] || '-')}${(row[COL.OPTION] && row[COL.OPTION].toUpperCase().trim() !== 'N/A') ? `<span class="result-option"> / ${escHtml(row[COL.OPTION])}</span>` : ''}</div>
         <div class="result-meta">
           ${[row[COL.CATEGORY] ? escHtml(row[COL.CATEGORY]) : '', brand ? escHtml(brand) : '', price || ''].filter(Boolean).join(' · ')}
         </div>
@@ -475,7 +475,8 @@ function openModal(row) {
   $('modal-name').textContent  = row[COL.NAME]  || '-';
 
   // 옵션 - 크고 선명하게
-  $('modal-option').textContent = row[COL.OPTION] || '';
+  const optVal = row[COL.OPTION] || '';
+  $('modal-option').textContent = (optVal.toUpperCase().trim() === 'N/A') ? '' : optVal;
 
   // 가격 - 옵션 아래 작게
   const price = row[COL.PRICE] ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
