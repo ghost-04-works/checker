@@ -346,9 +346,10 @@ async function startScanner() {
     $('qr-reader').innerHTML = '';
     html5QrCode = new Html5Qrcode('qr-reader');
     const config = {
-      fps: 15,
-      qrbox: { width: 260, height: 160 },
-      aspectRatio: window.innerHeight / window.innerWidth,
+      fps: 30,
+      qrbox: { width: 300, height: 200 },
+      aspectRatio: 1.7778,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
       formatsToSupport: [
         Html5QrcodeSupportedFormats.QR_CODE,
         Html5QrcodeSupportedFormats.CODE_128,
