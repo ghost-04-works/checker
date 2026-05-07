@@ -1,191 +1,63 @@
 /* ─────────────────────────────────────────────
-   Geon.checker  –  app.js  (OAuth 2.0)
+   Geon.checker  –  app.js  (Supabase)
    ───────────────────────────────────────────── */
 
-// ── OAuth config
-const CLIENT_ID = '666157816733-0uu1dkoda0ljjslrd479j371snkj62t7.apps.googleusercontent.com';
-const SCOPE      = 'https://www.googleapis.com/auth/spreadsheets.readonly';
-
-// ── Sheet config (고정값)
-const SHEET_ID   = '1UJoEBLtUXbEI9MpbS13jELTvhRwsG2jDitA56y8uIvA';
-const SHEET_NAME = 'item';
-
-// ── Column mapping (A=0, B=1, …)
-const COL = {
-  SKU:          0,  // A 품목코드
-  CATEGORY:     1,  // B 카테고리
-  NAME:         2,  // C 품목명
-  OPTION:       3,  // D 옵션
-  BARCODE:      4,  // E 품목바코드
-  CREATED:      5,  // F 작성일
-  LOCATION:     6,  // G 위치코드
-  BRAND:        7,  // H 브랜드
-  PRICE:        8,  // I 가격
-  NAVER_NAME:   9,  // J 네이버 스토어 제품명
-  NAVER_OPTION: 10, // K 네이버 스토어 옵션명
-  IMAGE_URL:    11, // L 이미지 URL
-  NAVER_URL:    12, // M 네이버스토어 링크
-  SHOPIFY_URL:  13, // N 쇼피파이 링크
-  ALT_BARCODE:  14, // O 보조바코드
-  NOTES:        15, // P 특이사항
-};
+// ── Supabase config
+const SUPABASE_URL = 'https://fnznnrdgvcroiimnokaj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuem5ucmRndmNyb2lpbW5va2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjcxMzUsImV4cCI6MjA5MzYwMzEzNX0.CUQAwydrYUqCGChE_ZUc6t7h0vL_MqGd_e2j4Bqw-UY';
 
 // ── State
-let sheetData   = [];
+let productData = [];
 let scanning    = false;
 let torchOn     = false;
-let accessToken = null;
-let tokenClient = null;
-let tokenExpiry = 0;
-
-// ── Config helpers
-const cfg = {
-  get: k => localStorage.getItem('gw_' + k) || '',
-  set: (k, v) => localStorage.setItem('gw_' + k, v),
-};
 
 // ── DOM refs
-const $    = id => document.getElementById(id);
-const tabs = document.querySelectorAll('.tab');
+const $     = id => document.getElementById(id);
+const tabs  = document.querySelectorAll('.tab');
 const views = { scanner: $('scanner-view'), search: $('search-view'), config: $('config-view') };
-const modalBg    = $('modal-backdrop');
-const toast      = $('toast');
-const lockScreen = $('lock-screen');
+const modalBg = $('modal-backdrop');
+const toast   = $('toast');
 
 // ── Boot
 function init() {
   bindEvents();
   updateConnectionStatus(false);
-
-  // 기존 서비스워커 모두 해제
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      regs.forEach(r => r.unregister());
-    });
-  }
-
-  waitForGIS(() => {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      callback: onTokenReceived,
-      error_callback: onTokenError,
-    });
-
-    const saved = sessionStorage.getItem('gw_token');
-    const exp   = parseInt(sessionStorage.getItem('gw_token_exp') || '0');
-    if (saved && Date.now() < exp) {
-      accessToken = saved;
-      tokenExpiry = exp;
-      onLoginSuccess();
-    } else {
-      lockScreen.style.display = 'flex';
-    }
-  });
+  fetchSupabaseData(true);
 }
 
-// 동적 로드 시 DOMContentLoaded가 이미 지났을 수 있으므로 양쪽 처리
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', init);
 } else {
   init();
 }
 
-function waitForGIS(cb) {
-  if (typeof google !== 'undefined' && google.accounts) cb();
-  else setTimeout(() => waitForGIS(cb), 100);
-}
-
-// ── OAuth
-function startGoogleLogin() {
-  $('lock-error').textContent = '';
-  $('lock-submit').textContent = '로그인 중...';
-  $('lock-submit').disabled = true;
-  if (tokenClient) {
-    tokenClient.requestAccessToken({ prompt: '' });
-  } else {
-    waitForGIS(() => {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPE,
-        callback: onTokenReceived,
-        error_callback: onTokenError,
-      });
-      tokenClient.requestAccessToken({ prompt: '' });
-    });
+// ── Supabase fetch
+async function fetchSupabaseData(silent = false) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes&is_active=eq.true&order=sku_code`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        }
+      }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    productData = await res.json();
+    updateConnectionStatus(true);
+    if (!silent) showToast(`${productData.length}개 품목 로드 완료`, 'success');
+    return true;
+  } catch (e) {
+    updateConnectionStatus(false);
+    if (!silent) showToast('연결 실패: ' + e.message, 'error');
+    return false;
   }
 }
 
-function onTokenReceived(tokenResponse) {
-  if (tokenResponse.error) { onTokenError(tokenResponse); return; }
-  accessToken = tokenResponse.access_token;
-  tokenExpiry = Date.now() + (tokenResponse.expires_in - 60) * 1000;
-  sessionStorage.setItem('gw_token', accessToken);
-  sessionStorage.setItem('gw_token_exp', tokenExpiry.toString());
-  onLoginSuccess();
-}
-
-function onTokenError(err) {
-  const msg = err.error === 'access_denied'
-    ? '접근이 거부됐어요. 조직 계정으로 로그인해 주세요.'
-    : '로그인에 실패했어요. 다시 시도해 주세요.';
-  $('lock-error').textContent = msg;
-  resetLoginButton();
-}
-
-function resetLoginButton() {
-  $('lock-submit').innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg> Google 로그인`;
-  $('lock-submit').disabled = false;
-}
-
-async function onLoginSuccess() {
-  lockScreen.style.display = 'none';
-  loadConfigInputs();
-  updateLoginStatusUI();
-  await fetchSheetData(true);
-}
-
-function logout() {
-  if (accessToken && typeof google !== 'undefined') {
-    google.accounts.oauth2.revoke(accessToken, () => {});
-  }
-  accessToken = null;
-  tokenExpiry = 0;
-  sessionStorage.removeItem('gw_token');
-  sessionStorage.removeItem('gw_token_exp');
-  sheetData = [];
-  updateConnectionStatus(false);
-  resetLoginButton();
-  $('lock-error').textContent = '';
-  lockScreen.style.display = 'flex';
-  showToast('로그아웃됐어요', '');
-}
-
-function updateLoginStatusUI() {
-  const el = $('login-status-desc');
-  if (!el) return;
-  if (accessToken && Date.now() < tokenExpiry) {
-    el.textContent = '✅ 로그인됨';
-    el.style.color = 'var(--accent)';
-  } else {
-    el.textContent = '로그인 필요';
-    el.style.color = 'var(--text2)';
-  }
-}
-
-async function ensureToken() {
-  if (accessToken && Date.now() < tokenExpiry) return true;
-  return new Promise((resolve) => {
-    tokenClient.callback = (resp) => {
-      if (resp.error) { resolve(false); return; }
-      accessToken = resp.access_token;
-      tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
-      sessionStorage.setItem('gw_token', accessToken);
-      sessionStorage.setItem('gw_token_exp', tokenExpiry.toString());
-      resolve(true);
-    };
-    tokenClient.requestAccessToken({ prompt: '' });
-  });
+function updateConnectionStatus(ok) {
+  $('conn-dot').className = 'status-dot ' + (ok ? 'ok' : 'err');
+  $('conn-text').textContent = ok ? `${productData.length}개 품목` : '미연결';
 }
 
 // ── Tab switching
@@ -197,7 +69,6 @@ function bindEvents() {
       tab.classList.add('active');
       Object.entries(views).forEach(([k, v]) => v.classList.toggle('active', k === name));
       if (name !== 'scanner' && scanning) stopScanner();
-      if (name === 'config') updateLoginStatusUI();
     });
   });
 
@@ -213,9 +84,16 @@ function bindEvents() {
     if (!q) { renderSearchResults([]); return; }
     searchTimer = setTimeout(() => renderSearchResults(searchRows(q)), 150);
   });
-  $('btn-save-config').addEventListener('click', saveConfig);
+
+  $('btn-refresh').addEventListener('click', async () => {
+    $('config-status').textContent = '불러오는 중...';
+    const ok = await fetchSupabaseData();
+    $('config-status').textContent = ok
+      ? `✅ ${productData.length}개 품목 로드됨`
+      : '❌ 연결 실패';
+  });
+
   $('btn-clear-cache').addEventListener('click', clearCache);
-  $('btn-logout').addEventListener('click', () => { if (confirm('로그아웃하시겠어요?')) logout(); });
   $('modal-close').addEventListener('click', closeModal);
   modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
 
@@ -228,109 +106,32 @@ function bindEvents() {
   $('modal').addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 80) closeModal(); }, { passive: true });
 }
 
-// ── Google Sheets fetch
-async function fetchSheetData(silent = false) {
-  
-  
-
-  const sheetId = SHEET_ID;
-  const sheetName = SHEET_NAME;
-  if (!sheetId) {
-    if (!silent) showToast('설정에서 스프레드시트 ID를 입력하세요', 'error');
-    return false;
-  }
-
-  const ok = await ensureToken();
-  if (!ok) {
-    if (!silent) showToast('로그인이 필요해요', 'error');
-    return false;
-  }
-
-  const range = encodeURIComponent(`${sheetName}!A2:P`);
-  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-
-  try {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-    const json = await res.json();
-    sheetData = json.values || [];
-    updateConnectionStatus(true);
-    if (!silent) showToast(`${sheetData.length}개 품목 로드 완료`, 'success');
-    return true;
-  } catch (e) {
-    updateConnectionStatus(false);
-    if (!silent) showToast('연결 실패: ' + e.message, 'error');
-    return false;
-  }
-}
-
-function updateConnectionStatus(ok) {
-  $('conn-dot').className = 'status-dot ' + (ok ? 'ok' : 'err');
-  $('conn-text').textContent = ok ? `${sheetData.length}개 품목` : '미연결';
-}
-
-// ── Cache & Reset
-async function clearCache() {
-  try {
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    // index.html 자체도 캐시 우회해서 새로 받아옴
-    window.location.href = location.pathname + '?v=' + Date.now();
-  } catch (e) {
-    window.location.href = location.pathname + '?v=' + Date.now();
-  }
-}
-
-function resetAll() {
-  if (!confirm('설정이 모두 삭제됩니다.\n계속하시겠어요?')) return;
-  localStorage.clear();
-  sessionStorage.clear();
-  clearCache();
-}
-
-// ── Config
-function loadConfigInputs() {
-}
-
-async function saveConfig() {
-  $('config-status').textContent = '불러오는 중...';
-  const ok = await fetchSheetData();
-  $('config-status').textContent = ok
-    ? `✅ ${sheetData.length}개 품목 로드됨`
-    : '❌ 연결 실패';
-}
-
 // ── Barcode lookup
 function findByBarcode(code) {
   const c = code.trim();
-  return sheetData.find(row =>
-    (row[COL.BARCODE]     || '').trim() === c ||
-    (row[COL.ALT_BARCODE] || '').trim() === c
+  return productData.find(p =>
+    (p.barcode     || '').trim() === c ||
+    (p.barcode_sub || '').trim() === c
   ) || null;
 }
 
 function findBySku(code) {
   const c = code.trim().toUpperCase();
-  return sheetData.find(row => (row[COL.SKU] || '').trim().toUpperCase() === c) || null;
+  return productData.find(p => (p.sku_code || '').trim().toUpperCase() === c) || null;
 }
 
 function searchRows(query) {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  return sheetData.filter(row =>
-    (row[COL.NAME]        || '').toLowerCase().includes(q) ||
-    (row[COL.SKU]         || '').toLowerCase().includes(q) ||
-    (row[COL.BARCODE]     || '').toLowerCase().includes(q) ||
-    (row[COL.ALT_BARCODE] || '').toLowerCase().includes(q) ||
-    (row[COL.BRAND]       || '').toLowerCase().includes(q) ||
-    (row[COL.OPTION]      || '').toLowerCase().includes(q) ||
-    (row[COL.NAVER_NAME]  || '').toLowerCase().includes(q) ||
-    (row[COL.NAVER_OPTION]|| '').toLowerCase().includes(q)
+  return productData.filter(p =>
+    (p.product_name        || '').toLowerCase().includes(q) ||
+    (p.sku_code            || '').toLowerCase().includes(q) ||
+    (p.barcode             || '').toLowerCase().includes(q) ||
+    (p.barcode_sub         || '').toLowerCase().includes(q) ||
+    (p.brand               || '').toLowerCase().includes(q) ||
+    (p.option              || '').toLowerCase().includes(q) ||
+    (p.naver_product_name  || '').toLowerCase().includes(q) ||
+    (p.naver_option_name   || '').toLowerCase().includes(q)
   );
 }
 
@@ -338,8 +139,8 @@ function searchRows(query) {
 let html5QrCode = null;
 
 async function startScanner() {
-  if (!sheetData.length) {
-    const ok = await fetchSheetData();
+  if (!productData.length) {
+    const ok = await fetchSupabaseData();
     if (!ok) return;
   }
   try {
@@ -413,8 +214,8 @@ function handleScanResult(code) {
   $('scanner-container').classList.add('scan-success');
   setTimeout(() => $('scanner-container').classList.remove('scan-success'), 400);
   if (navigator.vibrate) navigator.vibrate(50);
-  const row = findByBarcode(code) || findBySku(code);
-  if (row) openModal(row);
+  const product = findByBarcode(code) || findBySku(code);
+  if (product) openModal(product);
   else showToast(`인식: ${code} — 등록된 제품 없음`, 'error');
 }
 
@@ -422,7 +223,7 @@ function handleScanResult(code) {
 function doSearch() {
   const q = $('search-input').value.trim();
   if (!q) return;
-  if (!sheetData.length) { fetchSheetData().then(() => renderSearchResults(searchRows(q))); return; }
+  if (!productData.length) { fetchSupabaseData().then(() => renderSearchResults(searchRows(q))); return; }
   renderSearchResults(searchRows(q));
 }
 
@@ -439,73 +240,68 @@ function renderSearchResults(rows, showCount = 50) {
   const footer = remaining > 0
     ? `<button class="btn btn-secondary" style="width:100%;margin-top:4px;" onclick="renderSearchResults(window._lastRows, ${showCount + 50})">+ ${loadMore}개 더 보기 (${remaining}개 남음)</button>`
     : `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);">총 ${rows.length}개 검색됨</div>`;
-  el.innerHTML = limited.map((row) => {
-    const imgUrl = row[COL.IMAGE_URL] || '';
+  el.innerHTML = limited.map((p) => {
+    const imgUrl = p.image_url || '';
     const thumb  = imgUrl
       ? `<img class="result-thumb" src="${escHtml(imgUrl)}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" /><div class="result-thumb-placeholder" style="display:none">📦</div>`
       : `<div class="result-thumb-placeholder">📦</div>`;
-    const price = row[COL.PRICE] ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
-    const brand = row[COL.BRAND] || '';
-    return `<div class="result-item" onclick="openModalByIndex(${sheetData.indexOf(row)})">
+    const price = p.price ? `₩${Number(p.price).toLocaleString()}` : '';
+    const brand = p.brand || '';
+    return `<div class="result-item" onclick="openModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
       ${thumb}
       <div class="result-info">
-        <div class="result-name">${escHtml(row[COL.NAME] || '-')}${(row[COL.OPTION] && row[COL.OPTION].toUpperCase().trim() !== 'N/A') ? `<span class="result-option"> / ${escHtml(row[COL.OPTION])}</span>` : ''}</div>
+        <div class="result-name">${escHtml(p.product_name || '-')}${(p.option && p.option.toUpperCase().trim() !== 'N/A') ? `<span class="result-option"> / ${escHtml(p.option)}</span>` : ''}</div>
         <div class="result-meta">
-          ${[row[COL.CATEGORY] ? escHtml(row[COL.CATEGORY]) : '', brand ? escHtml(brand) : '', price || ''].filter(Boolean).join(' · ')}
+          ${[p.category ? escHtml(p.category) : '', brand ? escHtml(brand) : '', price || ''].filter(Boolean).join(' · ')}
         </div>
-        <div class="result-code">${escHtml(row[COL.SKU] || '')}${row[COL.BARCODE] ? ' · ' + escHtml(row[COL.BARCODE]) : ''}${row[COL.ALT_BARCODE] ? ' · ' + escHtml(row[COL.ALT_BARCODE]) : ''}</div>
+        <div class="result-code">${escHtml(p.sku_code || '')}${p.barcode ? ' · ' + escHtml(p.barcode) : ''}${p.barcode_sub ? ' · ' + escHtml(p.barcode_sub) : ''}</div>
       </div>
       <div class="result-arrow">›</div>
     </div>`;
   }).join('') + footer;
 }
 
-function openModalByIndex(idx) { openModal(sheetData[idx]); }
-
 // ── Modal
-function openModal(row) {
-  const imgUrl  = row[COL.IMAGE_URL] || '';
+function openModal(p) {
+  if (typeof p === 'string') p = JSON.parse(p);
+
+  const imgUrl  = p.image_url || '';
   const imgWrap = $('modal-image-wrap');
   imgWrap.innerHTML = imgUrl
     ? `<img src="${escHtml(imgUrl)}" onerror="this.parentNode.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>'" /><span class="zoom-hint">탭하여 확대 🔍</span>`
     : `<div class="product-image-placeholder">📦</div>`;
 
-  const category = row[COL.CATEGORY] || '';
-  const brand    = row[COL.BRAND]    || '';
-  const brandLine = [category, brand].filter(Boolean).join(' / ');
-  $('modal-brand').textContent = brandLine;
-  $('modal-name').textContent  = row[COL.NAME]  || '-';
+  const category = p.category || '';
+  const brand    = p.brand    || '';
+  $('modal-brand').textContent = [category, brand].filter(Boolean).join(' / ');
+  $('modal-name').textContent  = p.product_name || '-';
 
-  // 옵션 - 크고 선명하게
-  const optVal = row[COL.OPTION] || '';
+  const optVal = p.option || '';
   $('modal-option').textContent = (optVal.toUpperCase().trim() === 'N/A') ? '' : optVal;
 
-  // 가격 - 옵션 아래 작게
-  const price = row[COL.PRICE] ? `₩${Number(row[COL.PRICE]).toLocaleString()}` : '';
+  const price = p.price ? `₩${Number(p.price).toLocaleString()}` : '';
   $('modal-price-small').textContent = price;
 
-  // 특이사항을 가격 자리에 크게 표시
-  const notes = row[COL.NOTES] || '';
+  const notes = p.notes || '';
   $('modal-price').textContent    = notes;
   $('modal-price').style.color    = notes ? 'var(--accent)' : '';
   $('modal-price').style.fontSize = notes ? '18px' : '';
 
-  $('modal-sku').textContent      = row[COL.SKU]      || '-';
-  $('modal-location').textContent = row[COL.LOCATION] || '-';
-  $('modal-barcode').textContent  = row[COL.BARCODE]  || '-';
-  $('modal-naver-name').textContent = row[COL.NAVER_NAME] || '-';
+  $('modal-sku').textContent      = p.sku_code      || '-';
+  $('modal-location').textContent = p.location_code || '-';
+  $('modal-barcode').textContent  = p.barcode        || '-';
+  $('modal-naver-name').textContent = p.naver_product_name || '-';
 
-  const naverOption = row[COL.NAVER_OPTION] || '';
+  const naverOption = p.naver_option_name || '';
   $('modal-naver-option-wrap').style.display = naverOption ? '' : 'none';
   $('modal-naver-option').textContent = naverOption;
 
-  const altBarcode = row[COL.ALT_BARCODE] || '';
-  const altWrap = $('modal-alt-barcode-wrap');
-  altWrap.style.display = altBarcode ? '' : 'none';
+  const altBarcode = p.barcode_sub || '';
+  $('modal-alt-barcode-wrap').style.display = altBarcode ? '' : 'none';
   $('modal-alt-barcode').textContent = altBarcode;
 
-  const naverUrl   = row[COL.NAVER_URL]   || '';
-  const shopifyUrl = row[COL.SHOPIFY_URL] || '';
+  const naverUrl   = p.naver_url   || '';
+  const shopifyUrl = p.shopify_url || '';
   $('modal-links').innerHTML = `
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
@@ -529,6 +325,19 @@ function openZoom() {
 
 function closeZoom() {
   $('img-zoom-overlay').classList.remove('open');
+}
+
+// ── Cache & Reset
+async function clearCache() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    window.location.href = location.pathname + '?v=' + Date.now();
+  } catch (e) {
+    window.location.href = location.pathname + '?v=' + Date.now();
+  }
 }
 
 // ── Toast
