@@ -34,17 +34,30 @@ if (document.readyState === 'loading') {
 // ── Supabase fetch
 async function fetchSupabaseData(silent = false) {
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes&is_active=eq.true&order=sku_code`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    let allData = [];
+    let from = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes&is_active=eq.true&order=sku_code`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Range': `${from}-${from + pageSize - 1}`,
+            'Range-Unit': 'items',
+          }
         }
-      }
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    productData = await res.json();
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const batch = await res.json();
+      allData = allData.concat(batch);
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    productData = allData;
     updateConnectionStatus(true);
     if (!silent) showToast(`${productData.length}개 품목 로드 완료`, 'success');
     return true;
