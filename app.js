@@ -4,7 +4,7 @@
 
 // ── Supabase config
 const SUPABASE_URL = 'https://fnznnrdgvcroiimnokaj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuem5ucmRndmNyb2lpbW5va2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjcxMzUsImV4cCI6MjA5MzYwMzEzNX0.CUQAwydrYUqCGChE_ZUc6t7h0vL_MqGd_e2j4Bqw-UY';
+const SUPABASE_ANON_KEY = 'sb_publishable_Ljt_pMTg57GJ-7cCuKFaHA_1aNAiNxQ';
 
 // ── State
 let productData = [];
