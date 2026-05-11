@@ -3,8 +3,8 @@
    ───────────────────────────────────────────── */
 
 // ── Supabase config
-const SUPABASE_URL = 'https://fnznnrdgvcroiimnokaj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Ljt_pMTg57GJ-7cCuKFaHA_1aNAiNxQ';
+const SUPABASE_URL = 'https://yqpskohzmnfiymjrgdxj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxcHNrb2h6bW5maXltanJnZHhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MjQwMTgsImV4cCI6MjA5NDAwMDAxOH0.D75U1e8JMvVI0K2Ccq5DwOliPg_rt-2uvKse1V2fiqw';
 
 // ── State
 let productData = [];
