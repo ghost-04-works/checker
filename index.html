@@ -36,8 +36,8 @@
       --bg2: #141414;
       --bg3: #1e1e1e;
       --border: #252525;
-      --accent: #c8ff00;
-      --accent2: #a8d900;
+      --accent: #f0f0f0;
+      --accent2: #cccccc;
       --text: #f0f0f0;
       --text2: #aaaaaa;
       --text3: #606060;
@@ -667,7 +667,7 @@
       background: var(--text3);
       margin-right: 6px;
     }
-    .status-dot.ok { background: var(--accent); }
+    .status-dot.ok { background: #4caf50; }
     .status-dot.err { background: var(--red); }
 
     /* ── Loading spinner ── */
@@ -694,8 +694,17 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+
+<!-- Google Lock Screen -->
+<div id="lock-screen">
+  <div class="lock-logo">GEON<span>.</span>checker</div>
+  <div class="lock-desc">GEONWORKS 계정으로 로그인하세요<br>(@geon.works)</div>
+  <div id="g-signin-btn"></div>
+  <div class="lock-error" id="lock-error"></div>
+</div>
 
 <header>
   <div class="logo">
@@ -832,6 +841,67 @@
 </div>
 
 
+
+<script>
+const ALLOWED_DOMAIN = 'geon.works';
+const CLIENT_ID = '666157816733-0uu1dkoda0ljjslrd479j371snkj62t7.apps.googleusercontent.com';
+
+function initGoogleSignIn() {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: true,
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('g-signin-btn'),
+    {
+      type: 'standard',
+      shape: 'rectangular',
+      theme: 'filled_black',
+      text: 'signin_with',
+      size: 'large',
+      locale: 'ko',
+    }
+  );
+  google.accounts.id.prompt();
+}
+
+function handleCredentialResponse(response) {
+  const payload = parseJwt(response.credential);
+  const email = payload.email || '';
+  const domain = email.split('@')[1] || '';
+  if (domain === ALLOWED_DOMAIN) {
+    sessionStorage.setItem('gw-checker-auth', email);
+    document.getElementById('lock-screen').style.display = 'none';
+  } else {
+    document.getElementById('lock-error').textContent =
+      `@${ALLOWED_DOMAIN} 계정만 사용할 수 있어요 (현재: ${email})`;
+    google.accounts.id.revoke(email, () => {});
+  }
+}
+
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+  ).join('')));
+}
+
+// 세션 유지 확인
+const savedAuth = sessionStorage.getItem('gw-checker-auth');
+if (savedAuth && savedAuth.endsWith('@' + ALLOWED_DOMAIN)) {
+  document.getElementById('lock-screen').style.display = 'none';
+}
+
+window.addEventListener('load', () => {
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleSignIn();
+  } else {
+    const gsiScript = document.querySelector('script[src*="gsi/client"]');
+    if (gsiScript) gsiScript.addEventListener('load', initGoogleSignIn);
+  }
+});
+</script>
 
 <script>
   // 매번 최신 파일을 강제로 불러옴 (브라우저 캐시 우회)
