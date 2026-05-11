@@ -1,830 +1,887 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <title>Checker</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GW · 제품 검색</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f8f8f8;
+    --bg3: #f2f2f2;
+    --border: #e8e8e8;
+    --border2: #d4d4d4;
+    --text: #111111;
+    --text2: #555555;
+    --text3: #999999;
+    --accent: #111111;
+    --accent2: #333333;
+    --red: #c0392b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Noto Sans KR', sans-serif;
+    --r: 4px;
+  }
 
-  <style>
-    :root {
-      --bg: #0a0a0a;
-      --bg2: #111111;
-      --bg3: #1a1a1a;
-      --border: #2a2a2a;
-      --accent: #c8f135;
-      --accent2: #a8d420;
-      --text: #f0f0f0;
-      --text2: #888;
-      --text3: #555;
-      --red: #ff4444;
-      --radius: 12px;
-    }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
 
-    body {
-      font-family: 'Noto Sans KR', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      overflow-x: hidden;
-    }
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
 
-    /* ── Header ── */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: 'Space Mono', monospace;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    .logo-img {
-      width: 26px;
-      height: 26px;
-      object-fit: contain;
-      filter: invert(1);
-    }
-    .logo span { color: var(--accent); }
+  .conn-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    transition: background .3s;
+  }
+  .dot.ok { background: var(--accent); }
+  .dot.err { background: var(--red); }
 
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+  /* ── SEARCH BAR ── */
+  .search-wrap {
+    padding: 20px 24px 0;
+    max-width: 900px;
+    margin: 0 auto;
+  }
 
-    /* ── Tabs ── */
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .tab {
-      flex: 1;
-      padding: 12px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text3);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      letter-spacing: 0.3px;
-    }
-    .tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
+  .search-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
 
-    /* ── Views ── */
-    .view { display: none; }
-    .view.active { display: block; }
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+  }
 
-    /* ── Scanner View ── */
-    #scanner-view {
-      display: none;
-      flex-direction: column;
-      height: calc(100dvh - 97px);
-    }
-    #scanner-view.active { display: flex; }
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 15px;
+    pointer-events: none;
+  }
 
-    .scanner-container {
-      position: relative;
-      flex: 1;
-      background: #000;
-      overflow: hidden;
-    }
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--r);
+    padding: 12px 14px 12px 40px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text3); }
 
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+  .btn-search {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--r);
+    padding: 0 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: .05em;
+    white-space: nowrap;
+    transition: background .15s;
+  }
+  .btn-search:hover { background: var(--accent2); color: #fff; }
 
-    .scan-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
+  /* ── FILTER CHIPS ── */
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
 
-    .scan-frame {
-      width: 260px;
-      height: 160px;
-      position: relative;
-    }
+  .filter-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: .08em;
+    margin-right: 2px;
+  }
 
-    .scan-frame::before,
-    .scan-frame::after,
-    .scan-frame > span::before,
-    .scan-frame > span::after {
-      content: '';
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      border-color: var(--accent);
-      border-style: solid;
-    }
-    .scan-frame::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
-    .scan-frame::after  { top: 0; right: 0; border-width: 2px 2px 0 0; }
-    .scan-frame > span::before { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
-    .scan-frame > span::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+  .chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .15s;
+    background: transparent;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.on { border-color: var(--accent); color: #000; background: var(--accent); }
 
-    .scan-line {
-      position: absolute;
-      left: 4px;
-      right: 4px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      animation: scanMove 2s ease-in-out infinite;
-      top: 0;
-    }
+  /* ── STATS ── */
+  .stats-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
 
-    @keyframes scanMove {
-      0%   { top: 8px; opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: calc(100% - 8px); opacity: 0; }
-    }
+  .stat-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .stat-count b {
+    color: var(--accent);
+    font-size: 13px;
+  }
 
-    .scan-hint {
-      position: absolute;
-      bottom: 24px;
-      left: 0; right: 0;
-      text-align: center;
-      font-size: 13px;
-      color: rgba(255,255,255,0.6);
-      letter-spacing: 0.3px;
-    }
+  /* ── RESULTS TABLE ── */
+  .results-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
 
-    .scanner-controls {
-      padding: 16px 20px;
-      background: var(--bg2);
-      display: flex;
-      gap: 10px;
-    }
+  .table-wrap {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
 
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 11px 18px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      font-weight: 500;
-      font-family: 'Noto Sans KR', sans-serif;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s;
-      letter-spacing: 0.2px;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #0a0a0a;
-      flex: 1;
-    }
-    .btn-primary:active { background: var(--accent2); transform: scale(0.98); }
-    .btn-secondary {
-      background: var(--bg3);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-secondary:active { background: var(--border); transform: scale(0.98); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text2);
-      border: 1px solid var(--border);
-    }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-    /* ── Search View ── */
-    #search-view {
-      display: none;
-      flex-direction: column;
-      height: calc(100dvh - 97px);
-    }
-    #search-view.active { display: flex; }
+  thead tr {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border2);
+  }
 
-    .search-bar {
-      padding: 14px 16px;
-      background: var(--bg2);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 10px;
-    }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    color: var(--text3);
+    font-weight: 400;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s;
+  }
+  th:hover { color: var(--text2); }
+  th.sort-asc::after { content: ' ▲'; color: var(--accent); }
+  th.sort-desc::after { content: ' ▼'; color: var(--accent); }
 
-    .search-input {
-      flex: 1;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: 'Noto Sans KR', sans-serif;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .search-input:focus { border-color: var(--accent); }
-    .search-input::placeholder { color: var(--text3); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+    cursor: default;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg2); }
 
-    .search-results {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+  td {
+    padding: 10px 14px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
 
-    .result-item {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .result-item:active { background: var(--bg3); border-color: var(--accent); }
+  .td-sku {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
 
-    .result-thumb {
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      object-fit: cover;
-      background: var(--bg3);
-      flex-shrink: 0;
-    }
-    .result-thumb-placeholder {
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      background: var(--bg3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 18px;
-    }
+  .td-cat {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    white-space: nowrap;
+  }
 
-    .result-info { flex: 1; min-width: 0; }
-    .result-name {
-      font-size: 14px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .result-meta {
-      font-size: 12px;
-      color: var(--text2);
-      margin-top: 3px;
-    }
-    .result-code {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--text2);
-      margin-top: 3px;
-    }
-    .result-option {
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text2);
-    }
+  .td-name { font-weight: 500; }
 
-    .result-arrow {
-      color: var(--text3);
-      font-size: 16px;
-      flex-shrink: 0;
-    }
+  .td-opt {
+    color: var(--text2);
+    font-size: 12px;
+  }
 
-    /* ── Product Detail Modal ── */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 200;
-      display: flex;
-      align-items: flex-end;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
-    }
-    .modal-backdrop.open {
-      opacity: 1;
-      pointer-events: all;
-    }
+  .td-loc {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
 
-    .modal {
-      background: var(--bg2);
-      border-radius: 20px 20px 0 0;
-      width: 100%;
-      max-height: 92dvh;
-      overflow-y: auto;
-      transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-      padding-bottom: env(safe-area-inset-bottom, 20px);
-    }
-    .modal-backdrop.open .modal {
-      transform: translateY(0);
-    }
+  .td-price {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+  }
 
-    .modal-handle {
-      width: 36px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin: 12px auto 0;
-    }
+  .td-barcode {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
 
-    .modal-header {
-      padding: 16px 20px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-    .modal-title {
-      font-size: 13px;
-      font-family: 'Space Mono', monospace;
-      color: var(--text2);
-      letter-spacing: 0.5px;
-    }
-    .modal-close {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--bg3);
-      border: none;
-      color: var(--text2);
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  .td-brand {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
 
-    .product-image-wrap {
-      width: 100%;
-      height: 220px;
-      background: var(--bg3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      cursor: pointer;
-      position: relative;
-    }
-    .product-image-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      padding: 12px;
-      transition: opacity 0.15s;
-    }
-    .product-image-wrap:active img { opacity: 0.8; }
-    .product-image-wrap .zoom-hint {
-      position: absolute;
-      bottom: 8px;
-      right: 10px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.4);
-      pointer-events: none;
-    }
+  /* ── EMPTY / LOADING ── */
+  .empty {
+    padding: 60px 24px;
+    text-align: center;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+  }
+  .empty .em-icon { font-size: 32px; margin-bottom: 12px; }
 
-    /* ── Image Zoom Overlay ── */
-    .img-zoom-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.92);
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: zoom-out;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    .img-zoom-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .img-zoom-overlay img {
-      max-width: 92vw;
-      max-height: 88vh;
-      object-fit: contain;
-      border-radius: 8px;
-      transform: scale(0.92);
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .img-zoom-overlay.open img {
-      transform: scale(1);
-    }
-    .product-image-placeholder {
-      font-size: 48px;
-      opacity: 0.3;
-    }
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 60px;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    .product-body { padding: 20px; }
+  /* ── PAGINATION ── */
+  .paging {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
 
-    .product-brand {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--accent);
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
+  .page-btn {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.on { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .page-btn:disabled { opacity: .3; cursor: default; }
 
-    .product-name {
-      font-size: 20px;
-      font-weight: 700;
-      line-height: 1.3;
-      margin-bottom: 6px;
-    }
+  /* ── DETAIL MODAL ── */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .modal-bg.open { display: flex; align-items: center; justify-content: center; padding: 20px; }
 
-    .product-option {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
 
-    .product-price-small {
-      font-size: 13px;
-      color: var(--text2);
-      margin-bottom: 16px;
-    }
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
 
-    .product-price {
-      font-family: 'Space Mono', monospace;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 20px;
-    }
+  .modal-cat {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 4px;
+  }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+  .modal-name {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
 
-    .info-card {
-      background: var(--bg3);
-      border-radius: 10px;
-      padding: 12px;
-    }
-    .info-card.full { grid-column: 1 / -1; }
-    .info-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--text3);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .info-value {
-      font-size: 13px;
-      font-weight: 500;
-      word-break: break-all;
-    }
-    .info-value.mono {
-      font-family: 'Space Mono', monospace;
-      font-size: 12px;
-    }
+  .modal-opt {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 3px;
+  }
 
-    .link-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+  .modal-close {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text2);
+    cursor: pointer;
+    width: 28px; height: 28px;
+    font-size: 16px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
 
-    .link-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 13px 16px;
-      border-radius: var(--radius);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: opacity 0.15s;
-      color: #0a0a0a;
-    }
-    .link-btn:active { opacity: 0.8; }
-    .link-btn.naver { background: #03c75a; }
-    .link-btn.shopify { background: rgb(82, 45, 218); color: #fff; }
-    .link-btn.disabled {
-      background: var(--bg3);
-      color: var(--text3);
-      pointer-events: none;
-    }
-    .link-btn-icon { font-size: 16px; }
-    .link-btn-arrow { margin-left: auto; }
+  .modal-img {
+    width: 100%;
+    border-radius: var(--r);
+    background: var(--bg3);
+    margin-bottom: 20px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+  }
+  .modal-img img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
 
-    /* ── Empty / Error states ── */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 20px;
-      text-align: center;
-      gap: 12px;
-    }
-    .empty-icon { font-size: 40px; opacity: 0.3; }
-    .empty-title { font-size: 15px; font-weight: 500; color: var(--text2); }
-    .empty-desc { font-size: 13px; color: var(--text3); line-height: 1.5; }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      padding: 10px 20px;
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-      opacity: 0;
-      transition: all 0.3s;
-      z-index: 500;
-      pointer-events: none;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    .toast.error { border-color: var(--red); color: var(--red); }
-    .toast.success { border-color: var(--accent); color: var(--accent); }
+  .modal-field {
+    background: var(--bg3);
+    border-radius: var(--r);
+    padding: 10px 12px;
+  }
+  .modal-field.full { grid-column: 1 / -1; }
 
-    /* ── Config View ── */
-    #config-view {
-      display: none;
-      padding: 20px 16px;
-      flex-direction: column;
-      gap: 16px;
-    }
-    #config-view.active { display: flex; }
+  .mf-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .1em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
 
-    .config-section {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .config-section-title {
-      padding: 12px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--text3);
-      text-transform: uppercase;
-      border-bottom: 1px solid var(--border);
-    }
-    .config-row {
-      padding: 14px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      border-bottom: 1px solid var(--border);
-    }
-    .config-row:last-child { border-bottom: none; }
-    .config-label {
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .config-desc { font-size: 12px; color: var(--text2); }
-    .config-input {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: 'Space Mono', monospace;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-    .config-input:focus { border-color: var(--accent); }
+  .mf-val {
+    font-size: 13px;
+    font-weight: 500;
+    word-break: break-all;
+  }
 
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--text3);
-      margin-right: 6px;
-    }
-    .status-dot.ok { background: var(--accent); }
-    .status-dot.err { background: var(--red); }
+  .mf-val.mono { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .mf-val.price { font-family: var(--mono); font-size: 14px; }
+  .mf-val.dim { color: var(--text2); }
 
-    /* ── Loading spinner ── */
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+  .modal-links {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
 
-    /* ── Scan success flash ── */
-    @keyframes flashGreen {
-      0%   { box-shadow: inset 0 0 0 3px var(--accent); }
-      100% { box-shadow: inset 0 0 0 3px transparent; }
-    }
-    .scan-success { animation: flashGreen 0.4s ease-out; }
+  .link-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    border-radius: var(--r);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity .15s;
+  }
+  .link-btn:hover { opacity: .8; }
+  .link-btn.naver { background: #03c75a; color: #fff; }
+  .link-btn.shopify { background: #96bf48; color: #fff; }
+  .link-btn.disabled { background: var(--bg3); color: var(--text3); cursor: default; }
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  </style>
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  @media (max-width: 640px) {
+    header { padding: 12px 16px; }
+    .search-wrap, .results-wrap { padding-left: 16px; padding-right: 16px; }
+    .stats-row { padding-left: 16px; padding-right: 16px; }
+    .modal-grid { grid-template-columns: 1fr; }
+    td:nth-child(n+5) { display: none; }
+    th:nth-child(n+5) { display: none; }
+  }
+</style>
 </head>
 <body>
 
+<!-- 잠금 화면 -->
+<div id="lock-screen" style="display:flex;position:fixed;inset:0;background:#0d0d0d;z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;letter-spacing:.1em;">GEON<span style="color:#c8ff00;">.</span>search</div>
+  <div style="font-family:'Space Mono',monospace;font-size:11px;color:#555;letter-spacing:.1em;">ENTER PASSWORD</div>
+  <input id="lock-input" type="password" maxlength="20" autocomplete="off"
+    style="background:#141414;border:1px solid #333;border-radius:6px;padding:12px 16px;color:#e8e8e8;font-family:'Space Mono',monospace;font-size:18px;letter-spacing:.3em;text-align:center;outline:none;width:180px;"
+    placeholder="••••"
+    onkeydown="if(event.key==='Enter')checkPassword()"
+  />
+  <button onclick="checkPassword()"
+    style="background:#c8ff00;color:#000;border:none;border-radius:6px;padding:10px 28px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.08em;">
+    확인
+  </button>
+  <div id="lock-error" style="font-family:'Space Mono',monospace;font-size:11px;color:#ff4444;min-height:16px;"></div>
+</div>
+
 <header>
-  <div class="logo">
-    <svg width="22" height="22" viewBox="0 0 596 842" xmlns="http://www.w3.org/2000/svg" style="fill:var(--text);flex-shrink:0;" fill-rule="evenodd" clip-rule="evenodd">
-      <g transform="translate(-9.3635,-817.6605)">
-        <path d="M485.655,1233.52L412.764,1306.41L485.655,1306.41L485.655,1233.52Z"/>
-        <path d="M485.655,1091.31L270.556,1306.41L350.053,1385.9L350,1306.41L485.655,1170.75L485.655,1091.31Z"/>
-        <path d="M485.655,1379.3L412.764,1306.41L412.764,1385.96L350.053,1448.67L207.791,1306.41L485.655,1028.54L485.655,949.101L128.348,1306.41L350.053,1528.11L485.655,1379.3Z"/>
-      </g>
-    </svg>
-    Geon<span>.</span>checker
-  </div>
-  <div class="header-right">
-    <span id="status-indicator" style="font-size:12px;color:var(--text3);">
-      <span class="status-dot" id="conn-dot"></span><span id="conn-text">미연결</span>
-    </span>
+  <div class="logo">GEON<span>.</span>search</div>
+  <div class="conn-badge">
+    <div class="dot" id="dot"></div>
+    <span id="conn-text">연결 중...</span>
   </div>
 </header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="scanner">📷 스캔</div>
-  <div class="tab" data-tab="search">🔍 검색</div>
-  <div class="tab" data-tab="config">⚙️ 설정</div>
-</div>
-
-<!-- Scanner View -->
-<div id="scanner-view" class="view active">
-  <div class="scanner-container" id="scanner-container">
-    <div id="qr-reader" style="width:100%;height:100%;"></div>
-    <div class="scan-overlay" id="scan-overlay">
-      <div class="scan-frame">
-        <span></span>
-        <div class="scan-line"></div>
-      </div>
+<div class="search-wrap">
+  <div class="search-row">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="q" placeholder="품목명, SKU, 바코드, 브랜드, 카테고리, 위치코드 검색..." autocomplete="off" />
     </div>
-    <div class="scan-hint">바코드 또는 QR코드를 프레임 안에 맞춰주세요</div>
+    <button class="btn-search" onclick="doSearch()">검색</button>
   </div>
-  <div class="scanner-controls">
-    <button class="btn btn-primary" id="btn-scan">카메라 시작</button>
-    <button class="btn btn-secondary" id="btn-torch" style="display:none">💡</button>
-  </div>
-</div>
-
-<!-- Search View -->
-<div id="search-view" class="view">
-  <div class="search-bar">
-    <input class="search-input" id="search-input" type="search" placeholder="품목명, 품목코드, 바코드 검색..." autocomplete="off" />
-    <button class="btn btn-secondary" id="btn-search-go" style="padding:10px 14px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    </button>
-  </div>
-  <div class="search-results" id="search-results">
-    <div class="empty-state">
-      <div class="empty-icon">🔍</div>
-      <div class="empty-title">제품을 검색하세요</div>
-      <div class="empty-desc">품목명, 품목코드, 또는<br>바코드로 검색할 수 있어요</div>
-    </div>
+  <div class="filter-row">
+    <span class="filter-label">CATEGORY</span>
+    <button class="chip on" data-cat="all" onclick="setCategory(this,'all')">전체</button>
+    <button class="chip" data-cat="housing" onclick="setCategory(this,'housing')">housing</button>
+    <button class="chip" data-cat="pcb" onclick="setCategory(this,'pcb')">pcb</button>
+    <button class="chip" data-cat="plate" onclick="setCategory(this,'plate')">plate</button>
+    <button class="chip" data-cat="switch" onclick="setCategory(this,'switch')">switch</button>
+    <button class="chip" data-cat="stabilizer" onclick="setCategory(this,'stabilizer')">stabilizer</button>
+    <button class="chip" data-cat="keycap" onclick="setCategory(this,'keycap')">keycap</button>
+    <button class="chip" data-cat="foam" onclick="setCategory(this,'foam')">foam</button>
+    <button class="chip" data-cat="lubricant" onclick="setCategory(this,'lubricant')">lubricant</button>
+    <button class="chip" data-cat="cable" onclick="setCategory(this,'cable')">cable</button>
+    <button class="chip" data-cat="deskmat" onclick="setCategory(this,'deskmat')">deskmat</button>
+    <button class="chip" data-cat="wooting" onclick="setCategory(this,'wooting')">wooting</button>
+    <button class="chip" data-cat="ec" onclick="setCategory(this,'ec')">ec</button>
+    <button class="chip" data-cat="etc" onclick="setCategory(this,'etc')">etc</button>
   </div>
 </div>
 
-<!-- Config View -->
-<div id="config-view" class="view">
-  <div class="config-section">
-    <div class="config-section-title">데이터 연동</div>
-    <div class="config-row">
-      <div class="config-label">연결 상태</div>
-      <div class="config-desc" id="config-status">—</div>
-      <button class="btn btn-secondary" id="btn-refresh" style="margin-top:4px;">🔄 데이터 새로고침</button>
-    </div>
-  </div>
-  <div class="config-section">
-    <div class="config-section-title">앱 관리</div>
-    <div class="config-row">
-      <div class="config-label">캐시 삭제</div>
-      <div class="config-desc">앱 캐시만 삭제하고 새로고침 — 설정은 유지돼요</div>
-      <button class="btn btn-secondary" id="btn-clear-cache" style="margin-top:4px;">🗑 캐시 삭제 및 새로고침</button>
+<div class="stats-row" id="stats-row" style="display:none">
+  <div class="stat-count" id="stat-count"></div>
+</div>
+
+<div class="results-wrap">
+  <div id="results">
+    <div class="empty">
+      <div class="em-icon">🔎</div>
+      검색어를 입력하거나 카테고리를 선택하세요
     </div>
   </div>
 </div>
 
-<!-- Product Detail Modal -->
-<div class="modal-backdrop" id="modal-backdrop">
+<!-- 상세 모달 -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
   <div class="modal" id="modal">
-    <div class="modal-handle"></div>
     <div class="modal-header">
-      <span class="modal-title">PRODUCT INFO</span>
-      <button class="modal-close" id="modal-close">✕</button>
-    </div>
-    <div class="product-image-wrap" id="modal-image-wrap">
-      <div class="product-image-placeholder">📦</div>
-    </div>
-    <div class="product-body">
-      <div class="product-brand" id="modal-brand"></div>
-      <div class="product-name" id="modal-name"></div>
-      <div class="product-option" id="modal-option"></div>
-      <div class="product-price-small" id="modal-price-small"></div>
-      <div class="product-price" id="modal-price"></div>
-      <div class="info-grid">
-        <div class="info-card full">
-          <div class="info-label">네이버 스토어 제품명</div>
-          <div class="info-value" id="modal-naver-name"></div>
-        </div>
-        <div class="info-card full" id="modal-naver-option-wrap" style="display:none">
-          <div class="info-label">네이버 스토어 옵션명</div>
-          <div class="info-value" id="modal-naver-option"></div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">품목코드</div>
-          <div class="info-value mono" id="modal-sku"></div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">위치코드</div>
-          <div class="info-value mono" id="modal-location"></div>
-        </div>
-        <div class="info-card">
-          <div class="info-label">바코드</div>
-          <div class="info-value mono" id="modal-barcode"></div>
-        </div>
-        <div class="info-card" id="modal-alt-barcode-wrap" style="display:none">
-          <div class="info-label">보조바코드</div>
-          <div class="info-value mono" id="modal-alt-barcode"></div>
-        </div>
+      <div>
+        <div class="modal-cat" id="m-cat"></div>
+        <div class="modal-name" id="m-name"></div>
+        <div class="modal-opt" id="m-opt"></div>
       </div>
-      <div class="link-buttons" id="modal-links"></div>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
     </div>
+    <div class="modal-img" id="m-img"></div>
+    <div class="modal-grid" id="m-grid"></div>
+    <div class="modal-links" id="m-links"></div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
-<!-- Image Zoom Overlay -->
-<div class="img-zoom-overlay" id="img-zoom-overlay">
-  <img id="img-zoom-img" src="" alt="" />
-</div>
-
-
 
 <script>
-  // 매번 최신 파일을 강제로 불러옴 (브라우저 캐시 우회)
-  const s = document.createElement('script');
-  s.src = 'app.js?v=' + Date.now();
-  document.body.appendChild(s);
+const SUPABASE_URL = 'https://yqpskohzmnfiymjrgdxj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxcHNrb2h6bW5maXltanJnZHhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MjQwMTgsImV4cCI6MjA5NDAwMDAxOH0.D75U1e8JMvVI0K2Ccq5DwOliPg_rt-2uvKse1V2fiqw';
+
+const PAGE_SIZE = 50;
+let allResults = [];
+let currentPage = 1;
+let sortCol = null;
+let sortDir = 'asc';
+let selectedCat = 'all';
+
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+};
+
+// ── 연결 상태
+async function checkConn() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/products?select=id&limit=1`, { headers });
+    const ok = r.ok;
+    document.getElementById('dot').className = 'dot ' + (ok ? 'ok' : 'err');
+    document.getElementById('conn-text').textContent = ok ? '연결됨' : '연결 실패';
+  } catch {
+    document.getElementById('dot').className = 'dot err';
+    document.getElementById('conn-text').textContent = '연결 실패';
+  }
+}
+
+// ── 카테고리 필터
+function setCategory(el, cat) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  selectedCat = cat;
+  doSearch();
+}
+
+// ── 검색
+async function doSearch() {
+  const q = document.getElementById('q').value.trim();
+  if (!q && selectedCat === 'all') {
+    document.getElementById('results').innerHTML = `<div class="empty"><div class="em-icon">🔎</div>검색어를 입력하거나 카테고리를 선택하세요</div>`;
+    document.getElementById('stats-row').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('results').innerHTML = `<div class="loading"><div class="spinner"></div>검색 중...</div>`;
+  document.getElementById('stats-row').style.display = 'none';
+
+  try {
+    let url = `${SUPABASE_URL}/rest/v1/products?select=*&order=sku_code`;
+
+    // 카테고리 필터
+    if (selectedCat !== 'all') url += `&category=eq.${selectedCat}`;
+
+    // 검색어 필터 (OR 조건)
+    if (q) {
+      const encoded = encodeURIComponent(q);
+      url += `&or=(sku_code.ilike.*${encoded}*,product_name.ilike.*${encoded}*,barcode.ilike.*${encoded}*,barcode_sub.ilike.*${encoded}*,brand.ilike.*${encoded}*,location_code.ilike.*${encoded}*,category.ilike.*${encoded}*)`;
+    }
+
+    // 전체 가져오기 (페이지네이션 처리)
+    let allData = [];
+    let from = 0;
+    while (true) {
+      const r = await fetch(url, {
+        headers: { ...headers, 'Range': `${from}-${from + 999}`, 'Range-Unit': 'items' }
+      });
+      const batch = await r.json();
+      allData = allData.concat(batch);
+      if (batch.length < 1000) break;
+      from += 1000;
+    }
+
+    allResults = allData;
+    currentPage = 1;
+    sortCol = null;
+    renderTable();
+  } catch (e) {
+    document.getElementById('results').innerHTML = `<div class="empty"><div class="em-icon">⚠️</div>오류: ${e.message}</div>`;
+  }
+}
+
+// ── 정렬
+function sortBy(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = 'asc';
+  }
+  currentPage = 1;
+  renderTable();
+}
+
+function getSorted(data) {
+  if (!sortCol) return data;
+  return [...data].sort((a, b) => {
+    const va = (a[sortCol] || '').toString().toLowerCase();
+    const vb = (b[sortCol] || '').toString().toLowerCase();
+    const n = va.localeCompare(vb, 'ko');
+    return sortDir === 'asc' ? n : -n;
+  });
+}
+
+// ── 테이블 렌더
+function renderTable() {
+  const sorted = getSorted(allResults);
+  const total = sorted.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = sorted.slice(start, start + PAGE_SIZE);
+
+  // 통계
+  document.getElementById('stats-row').style.display = 'flex';
+  document.getElementById('stat-count').innerHTML = `총 <b>${total.toLocaleString()}</b>개 품목`;
+
+  if (total === 0) {
+    document.getElementById('results').innerHTML = `<div class="empty"><div class="em-icon">😶</div>검색 결과가 없어요</div>`;
+    return;
+  }
+
+  const cols = [
+    { key: 'sku_code',      label: 'SKU' },
+    { key: 'category',      label: 'CATEGORY' },
+    { key: 'brand',         label: 'BRAND' },
+    { key: 'product_name',  label: 'PRODUCT' },
+    { key: 'option',        label: 'OPTION' },
+    { key: 'barcode',       label: 'BARCODE' },
+    { key: 'location_code', label: 'LOCATION' },
+    { key: 'price',         label: 'PRICE' },
+  ];
+
+  const thHTML = cols.map(c => {
+    let cls = '';
+    if (sortCol === c.key) cls = sortDir === 'asc' ? 'sort-asc' : 'sort-desc';
+    return `<th class="${cls}" onclick="sortBy('${c.key}')">${c.label}</th>`;
+  }).join('');
+
+  const rows = page.map((p, i) => {
+    const price = p.price ? '₩' + Number(p.price).toLocaleString() : '—';
+    const barcode = p.barcode || '—';
+    const loc = p.location_code || '—';
+    const opt = p.option && p.option.toUpperCase() !== 'N/A' ? p.option : '—';
+    const brand = p.brand || '—';
+    return `<tr onclick="openModal(${start + i})">
+      <td class="td-sku">${esc(p.sku_code || '')}</td>
+      <td class="td-cat">${esc(p.category || '')}</td>
+      <td class="td-brand">${esc(brand)}</td>
+      <td class="td-name">${esc(p.product_name || '')}</td>
+      <td class="td-opt">${esc(opt)}</td>
+      <td class="td-barcode">${esc(barcode)}</td>
+      <td class="td-loc">${esc(loc)}</td>
+      <td class="td-price">${price}</td>
+    </tr>`;
+  }).join('');
+
+  // 페이지네이션
+  let pagingHTML = '';
+  if (totalPages > 1) {
+    const prevDis = currentPage === 1 ? 'disabled' : '';
+    const nextDis = currentPage === totalPages ? 'disabled' : '';
+    pagingHTML = `<div class="paging">
+      <button class="page-btn" onclick="goPage(${currentPage-1})" ${prevDis}>‹</button>`;
+    const range = getPageRange(currentPage, totalPages);
+    range.forEach(p => {
+      if (p === '...') pagingHTML += `<span style="color:var(--text3);padding:0 4px">…</span>`;
+      else pagingHTML += `<button class="page-btn${p === currentPage ? ' on' : ''}" onclick="goPage(${p})">${p}</button>`;
+    });
+    pagingHTML += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${nextDis}>›</button></div>`;
+  }
+
+  document.getElementById('results').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${thHTML}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${pagingHTML}
+  `;
+}
+
+function getPageRange(cur, total) {
+  if (total <= 7) return Array.from({length: total}, (_, i) => i + 1);
+  const pages = [];
+  if (cur <= 4) {
+    for (let i = 1; i <= 5; i++) pages.push(i);
+    pages.push('...', total);
+  } else if (cur >= total - 3) {
+    pages.push(1, '...');
+    for (let i = total - 4; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1, '...', cur - 1, cur, cur + 1, '...', total);
+  }
+  return pages;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── 상세 모달
+function openModal(idx) {
+  const sorted = getSorted(allResults);
+  const p = sorted[idx];
+  if (!p) return;
+
+  document.getElementById('m-cat').textContent = p.category || '';
+  document.getElementById('m-name').textContent = p.product_name || '-';
+  const opt = p.option && p.option.toUpperCase() !== 'N/A' ? p.option : '';
+  document.getElementById('m-opt').textContent = opt;
+
+  // 이미지
+  const imgEl = document.getElementById('m-img');
+  if (p.image_url) {
+    imgEl.innerHTML = `<img src="${esc(p.image_url)}" onerror="this.parentNode.innerHTML='📦'" />`;
+  } else {
+    imgEl.innerHTML = '📦';
+  }
+
+  // 필드
+  const fields = [
+    { label: 'SKU 코드',       val: p.sku_code,            cls: 'mono' },
+    { label: '브랜드',          val: p.brand,               cls: '' },
+    { label: '바코드',          val: p.barcode,             cls: 'mono' },
+    { label: '보조 바코드',     val: p.barcode_sub,         cls: 'mono' },
+    { label: '위치 코드',       val: p.location_code,       cls: 'mono' },
+    { label: '가격',            val: p.price ? '₩' + Number(p.price).toLocaleString() : null, cls: 'price' },
+    { label: '네이버 제품명',   val: p.naver_product_name,  cls: '', full: true },
+    { label: '네이버 옵션명',   val: p.naver_option_name,   cls: '', full: true },
+    { label: '특이사항',        val: p.notes,               cls: '', full: true },
+    { label: '작성일',          val: p.created_at,          cls: 'dim' },
+  ];
+
+  const gridHTML = fields
+    .filter(f => f.val)
+    .map(f => `<div class="modal-field${f.full ? ' full' : ''}">
+      <div class="mf-label">${f.label}</div>
+      <div class="mf-val ${f.cls}">${esc(f.val)}</div>
+    </div>`).join('');
+
+  document.getElementById('m-grid').innerHTML = gridHTML;
+
+  // 링크
+  const naver = p.naver_url
+    ? `<a class="link-btn naver" href="${esc(p.naver_url)}" target="_blank" rel="noopener">🛒 네이버 스토어</a>`
+    : `<span class="link-btn disabled">🛒 링크 없음</span>`;
+  const shopify = p.shopify_url
+    ? `<a class="link-btn shopify" href="${esc(p.shopify_url)}" target="_blank" rel="noopener">🛍 Shopify</a>`
+    : `<span class="link-btn disabled">🛍 링크 없음</span>`;
+  document.getElementById('m-links').innerHTML = naver + shopify;
+
+  document.getElementById('modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-bg')) closeModalBtn();
+}
+function closeModalBtn() {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── 엔터키 검색
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+// ── ESC 모달 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModalBtn();
+});
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── 잠금 해제
+function checkPassword() {
+  const val = document.getElementById('lock-input').value;
+  if (val === '0781') {
+    sessionStorage.setItem('gw-auth', '1');
+    document.getElementById('lock-screen').style.display = 'none';
+  } else {
+    const err = document.getElementById('lock-error');
+    err.textContent = '비밀번호가 틀렸어요';
+    document.getElementById('lock-input').value = '';
+    document.getElementById('lock-input').focus();
+    setTimeout(() => { err.textContent = ''; }, 2000);
+  }
+}
+
+if (sessionStorage.getItem('gw-auth') === '1') {
+  document.getElementById('lock-screen').style.display = 'none';
+} else {
+  setTimeout(() => document.getElementById('lock-input').focus(), 100);
+}
+
+// ── 초기화
+checkConn();
 </script>
 </body>
 </html>
