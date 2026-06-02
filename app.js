@@ -319,6 +319,26 @@ function openModal(p) {
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
   `;
+  // 셀메이트 재고 조회
+  const stockEl = $('modal-stock');
+  if (stockEl) {
+    stockEl.textContent = '조회 중...';
+    stockEl.style.color = 'var(--text3)';
+    const barcode = p.barcode || p.sku_code || '';
+    fetchSellmateStock(barcode).then(stock => {
+      if (stock === null) {
+        stockEl.textContent = '조회 실패';
+        stockEl.style.color = 'var(--text3)';
+      } else if (stock === 0) {
+        stockEl.textContent = '재고 없음';
+        stockEl.style.color = 'var(--red)';
+      } else {
+        stockEl.textContent = `${stock.toLocaleString()}개`;
+        stockEl.style.color = 'var(--accent)';
+      }
+    });
+  }
+
   modalBg.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -350,6 +370,34 @@ async function clearCache() {
     window.location.href = location.pathname + '?v=' + Date.now();
   } catch (e) {
     window.location.href = location.pathname + '?v=' + Date.now();
+  }
+}
+
+// ── Sellmate 재고 조회
+const SELLMATE_WAREHOUSE_IDS = '3956,3957,3958,3959,3960';
+
+async function fetchSellmateStock(barcode) {
+  if (!barcode) return null;
+  try {
+    const params = new URLSearchParams({
+      page: 1,
+      perPage: 10,
+      warehouseIds: SELLMATE_WAREHOUSE_IDS,
+      includeDeletedWarehouses: false,
+      date: new Date().toISOString().slice(0, 10),
+      searchSubject: 'barcode',
+      searchKeyword: barcode,
+      includeDeletedProducts: false,
+    });
+    const res = await fetch(
+      `https://integrated-inventory.sellmate.co.kr/tenant/geon/stock/ledgers/summary?${params}`
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.data?.length) return null;
+    return json.data[0].totalStock ?? null;
+  } catch (e) {
+    return null;
   }
 }
 
