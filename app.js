@@ -373,29 +373,52 @@ async function clearCache() {
   }
 }
 
-// ── Sellmate 재고 조회
-const SELLMATE_WAREHOUSE_IDS = '3956,3957,3958,3959,3960';
+// ── Sellmate 재고 조회 (기말재고)
+const SELLMATE_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIyIiwianRpIjoiYjUzYWZjOGI0ZTY5Yzg4YTRkZjUyMjdhZDU4YTYyZmI1YjVjMDQ2YjAwZTZkMTNlOTI2Yjc3NWY1MWIxZGY5Y2Q0OThhMzZkN2Y0ZDZjYmMiLCJpYXQiOjE3ODAzODQ2NDQuMzE0MjIxLCJuYmYiOjE3ODAzODQ2NDQuMzE0MjI0LCJleHAiOjE4MTE5MjA2NDQuMjkyNDY3LCJzdWIiOiI3NCIsInNjb3BlcyI6WyIqIl19.0fAUoR0h4E_JmPhfO_JOIavL6dpGRRtDjX882XgJaNdB_9kAb6vrxceG-0_gRsWfAJNrkuLpcEwY4Tv2ltxXH1cNk5nxxwStvaCWB03yza9_phDcXr694eCK_5ouSKMeZMLW3Kje5ySYrmyz_U0nNcM6nmqYabShN5r9O4vmr7cciq9rxOeeEszAIgrDN_FNPBQqe9JLFr-GOGQuGECHhJJUDNTSVLegSo90dWIwm3d2AZWFphDyFYxBkUE2iVJUVFDSTKcTHsB3QGXuBLMhMTl29JwCq1Vio8Lasbb-Q3yv3fC74Qn96zEnlHpMFhKaYlDokhkU56aHgWVuz1vfBNl6ne42K3WsJtynOspAxC-a-1pOtBImBi8bBGgbN4AKnXxZXb43hsZV0XX-IfC5m0CQeK603ke8Pbz2-7c7eG5zRB5mnncvH3PExePnyc1RJklYK2zYzXQ9p0Ci391Gp4voLoXa7083het2hONv1V7njGDiMayiVfoMZS97u2hPcPYE9KEvnC8Lbytf4HP7U31iKllvFt2-LgxnbgqPD_W2JXpF_6FFfhqioHyA4pBve4MC3MbKhxirxLhn2NAYVSxK5V3ligjgm5IG0qn3ng8CdXXsfjCvUbleOT_zciA4C-JxVneM0EDKqTObzMEVAcrpsnxfv5EIDbGysisV2dk';
 
 async function fetchSellmateStock(barcode) {
   if (!barcode) return null;
   try {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-01`;
+    const dateEnd = `${yyyy}-${mm}-${new Date(yyyy, today.getMonth() + 1, 0).getDate()}`;
+
     const params = new URLSearchParams({
-      page: 1,
-      perPage: 10,
-      warehouseIds: SELLMATE_WAREHOUSE_IDS,
-      includeDeletedWarehouses: false,
-      date: new Date().toISOString().slice(0, 10),
-      searchSubject: 'barcode',
-      searchKeyword: barcode,
-      includeDeletedProducts: false,
+      'domains[]': 'geon',
+      'display_type': 'unified',
+      'date_from': dateStr,
+      'date_to': dateEnd,
+      'queries[]': `barcode|contains|${barcode}`,
+      'page': 1,
+      'per_page': 5,
     });
+
     const res = await fetch(
-      `https://integrated-inventory.sellmate.co.kr/tenant/geon/stock/ledgers/summary?${params}`
+      `https://c-api.sellmate.co.kr/tenant/geon/statistics/stocks?${params}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${SELLMATE_TOKEN}`,
+          'Accept': 'application/json',
+          'x-requested-from': 'SMFE',
+        }
+      }
     );
     if (!res.ok) return null;
     const json = await res.json();
     if (!json.data?.length) return null;
-    return json.data[0].totalStock ?? null;
+
+    // 바코드 매칭되는 variant 찾기
+    for (const product of json.data) {
+      for (const variant of product.variants || []) {
+        if ([variant.barcode1, variant.barcode2, variant.barcode3].includes(barcode)) {
+          return variant.statistics?.closing_inventory_qty ?? null;
+        }
+      }
+    }
+    // 매칭 없으면 첫 번째 variant 기말재고
+    return json.data[0]?.variants?.[0]?.statistics?.closing_inventory_qty ?? null;
   } catch (e) {
     return null;
   }
