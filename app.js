@@ -40,7 +40,7 @@ async function fetchSupabaseData(silent = false) {
 
     while (true) {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes&is_active=eq.true&order=sku_code`,
+        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes,stock&is_active=eq.true&order=sku_code`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -319,24 +319,20 @@ function openModal(p) {
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
   `;
-  // 셀메이트 재고 조회
+  // 재고 표시 (Supabase stock 컬럼)
   const stockEl = $('modal-stock');
   if (stockEl) {
-    stockEl.textContent = '조회 중...';
-    stockEl.style.color = 'var(--text3)';
-    const barcode = p.sku_code || p.barcode || '';
-    fetchSellmateStock(barcode).then(stock => {
-      if (stock === null) {
-        stockEl.textContent = '조회 실패';
-        stockEl.style.color = 'var(--text3)';
-      } else if (stock === 0) {
-        stockEl.textContent = '재고 없음';
-        stockEl.style.color = 'var(--red)';
-      } else {
-        stockEl.textContent = `${stock.toLocaleString()}개`;
-        stockEl.style.color = 'var(--accent)';
-      }
-    });
+    const qty = p.stock;
+    if (qty === null || qty === undefined || qty === '') {
+      stockEl.textContent = '-';
+      stockEl.style.color = 'var(--text3)';
+    } else if (qty === 0) {
+      stockEl.textContent = '재고 없음';
+      stockEl.style.color = 'var(--red)';
+    } else {
+      stockEl.textContent = `${Number(qty).toLocaleString()}개`;
+      stockEl.style.color = 'var(--accent)';
+    }
   }
 
   modalBg.classList.add('open');
