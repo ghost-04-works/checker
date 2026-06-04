@@ -315,10 +315,13 @@ function openModal(p) {
 
   const naverUrl   = p.naver_url   || '';
   const shopifyUrl = p.shopify_url || '';
+  const sellmateUrl = p.barcode
+    ? `https://geon.sellmate.co.kr/stock/stock_list_new.asp?Search_How=bcode_no&Search_Key=${encodeURIComponent(p.barcode)}&first_in_check=off`
+    : '';
   $('modal-links').innerHTML = `
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
-  `;
+    ${sellmateUrl ? `<a class="link-btn" style="background:var(--surface2);border-color:var(--border)" href="${escHtml(sellmateUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">📦</span> 셀메이트 재고<span class="link-btn-arrow">↗</span></a>` : ''}`;
   // 재고 표시 (Supabase stock 컬럼)
   const stockEl = $('modal-stock');
   if (stockEl) {
