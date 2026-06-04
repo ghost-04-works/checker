@@ -40,7 +40,7 @@ async function fetchSupabaseData(silent = false) {
 
     while (true) {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes,stock&is_active=eq.true&order=sku_code`,
+        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes,stock,stock_updated_at&is_active=eq.true&order=sku_code`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -323,14 +323,24 @@ function openModal(p) {
   const stockEl = $('modal-stock');
   if (stockEl) {
     const qty = p.stock;
+    const formatStockTime = () => {
+      if (!p.stock_updated_at) return '';
+      const d = new Date(p.stock_updated_at);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return ` | ${hh}:${mm} · ${yyyy}-${mo}-${dd}`;
+    };
     if (qty === null || qty === undefined || qty === '') {
       stockEl.textContent = '-';
       stockEl.style.color = 'var(--text3)';
     } else if (qty === 0) {
-      stockEl.textContent = '재고 없음';
+      stockEl.textContent = '재고 없음' + formatStockTime();
       stockEl.style.color = 'var(--red)';
     } else {
-      stockEl.textContent = `${Number(qty).toLocaleString()}개`;
+      stockEl.textContent = `${Number(qty).toLocaleString()} EA` + formatStockTime();
       stockEl.style.color = 'var(--accent)';
     }
   }
