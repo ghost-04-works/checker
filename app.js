@@ -356,6 +356,11 @@ function openModal(p) {
     if (stockCard && sellmateUrl) {
       stockCard.href = sellmateUrl;
       stockCard.style.cursor = 'pointer';
+      stockCard.style.borderColor = '#2563eb';
+      stockCard.style.background = 'rgba(37,99,235,0.08)';
+      // 라벨에 화살표 추가
+      const label = stockCard.querySelector('.info-label');
+      if (label) label.innerHTML = '재고 (셀메이트) <span style="float:right;font-size:16px;color:#60a5fa;">↗</span>';
     }
   }
 
