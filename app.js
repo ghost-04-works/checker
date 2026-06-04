@@ -319,8 +319,9 @@ function openModal(p) {
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
   `;
-  // 재고 표시 (Supabase stock 컬럼, 클릭시 셀메이트로 이동)
+  // 재고 표시 (Supabase stock 컬럼, 카드 전체 클릭시 셀메이트로 이동)
   const stockEl = $('modal-stock');
+  const stockCard = $('modal-stock-card');
   if (stockEl) {
     const qty = p.stock;
     const sellmateUrl = p.barcode
@@ -349,11 +350,12 @@ function openModal(p) {
       color = 'var(--accent)';
     }
 
-    if (sellmateUrl && qty !== null && qty !== undefined && qty !== '') {
-      stockEl.innerHTML = `<a href="${sellmateUrl}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1px dashed ${color};">${text} ↗</a>`;
-    } else {
-      stockEl.textContent = text;
-      stockEl.style.color = color;
+    stockEl.textContent = text;
+    stockEl.style.color = color;
+
+    if (stockCard && sellmateUrl) {
+      stockCard.href = sellmateUrl;
+      stockCard.style.cursor = 'pointer';
     }
   }
 
