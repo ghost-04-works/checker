@@ -315,17 +315,17 @@ function openModal(p) {
 
   const naverUrl   = p.naver_url   || '';
   const shopifyUrl = p.shopify_url || '';
-  const sellmateUrl = p.barcode
-    ? `https://geon.sellmate.co.kr/stock/stock_list_new.asp?Search_How=bcode_no&Search_Key=${encodeURIComponent(p.barcode)}&first_in_check=off`
-    : '';
   $('modal-links').innerHTML = `
     ${naverUrl ? `<a class="link-btn naver" href="${escHtml(naverUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛒</span> 네이버 스토어<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛒</span> 네이버 스토어 링크 없음</div>`}
     ${shopifyUrl ? `<a class="link-btn shopify" href="${escHtml(shopifyUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">🛍</span> Shopify<span class="link-btn-arrow">↗</span></a>` : `<div class="link-btn disabled"><span class="link-btn-icon">🛍</span> Shopify 링크 없음</div>`}
-    ${sellmateUrl ? `<a class="link-btn" style="background:var(--surface2);border-color:var(--border)" href="${escHtml(sellmateUrl)}" target="_blank" rel="noopener"><span class="link-btn-icon">📦</span> 셀메이트 재고<span class="link-btn-arrow">↗</span></a>` : ''}`;
-  // 재고 표시 (Supabase stock 컬럼)
+  `;
+  // 재고 표시 (Supabase stock 컬럼, 클릭시 셀메이트로 이동)
   const stockEl = $('modal-stock');
   if (stockEl) {
     const qty = p.stock;
+    const sellmateUrl = p.barcode
+      ? `https://geon.sellmate.co.kr/stock/stock_list_new.asp?Search_How=bcode_no&Search_Key=${encodeURIComponent(p.barcode)}&first_in_check=off`
+      : '';
     const formatStockTime = () => {
       if (!p.stock_updated_at) return '';
       const d = new Date(p.stock_updated_at);
@@ -336,15 +336,24 @@ function openModal(p) {
       const dd = String(d.getDate()).padStart(2, '0');
       return ` | ${hh}:${mm} · ${yyyy}-${mo}-${dd}`;
     };
+
+    let text, color;
     if (qty === null || qty === undefined || qty === '') {
-      stockEl.textContent = '-';
-      stockEl.style.color = 'var(--text3)';
+      text = '-';
+      color = 'var(--text3)';
     } else if (qty === 0) {
-      stockEl.textContent = '재고 없음' + formatStockTime();
-      stockEl.style.color = 'var(--red)';
+      text = '재고 없음' + formatStockTime();
+      color = 'var(--red)';
     } else {
-      stockEl.textContent = `${Number(qty).toLocaleString()} EA` + formatStockTime();
-      stockEl.style.color = 'var(--accent)';
+      text = `${Number(qty).toLocaleString()} EA` + formatStockTime();
+      color = 'var(--accent)';
+    }
+
+    if (sellmateUrl && qty !== null && qty !== undefined && qty !== '') {
+      stockEl.innerHTML = `<a href="${sellmateUrl}" target="_blank" rel="noopener" style="color:${color};text-decoration:none;border-bottom:1px dashed ${color};">${text} ↗</a>`;
+    } else {
+      stockEl.textContent = text;
+      stockEl.style.color = color;
     }
   }
 
