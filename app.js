@@ -324,7 +324,7 @@ function openModal(p) {
   if (stockEl) {
     stockEl.textContent = '조회 중...';
     stockEl.style.color = 'var(--text3)';
-    const barcode = p.barcode || p.sku_code || '';
+    const barcode = p.sku_code || p.barcode || '';
     fetchSellmateStock(barcode).then(stock => {
       if (stock === null) {
         stockEl.textContent = '조회 실패';
@@ -389,7 +389,7 @@ async function fetchSellmateStock(barcode) {
     const params = new URLSearchParams({
       'domains[]': 'geon',
       'date_type': 'ordered_at',
-      'queries[]': `barcode|contains|${barcode}`,
+      'queries[]': `product_code|contains|${barcode}`,
       'periodic_basis': 'daily',
       'page': 1,
       'per_page': 5,
@@ -415,7 +415,7 @@ async function fetchSellmateStock(barcode) {
     // 바코드 매칭되는 variant 찾기
     for (const product of json.data) {
       for (const variant of product.variants || []) {
-        if ([variant.barcode1, variant.barcode2, variant.barcode3].includes(barcode)) {
+        if ([variant.barcode1, variant.barcode2, variant.barcode3, variant.code, variant.name].includes(barcode)) {
           // periodic_statistics 마지막 항목의 inventory_qty = 검색 종료일 당시 재고
           const periodic = variant.periodic_statistics;
           if (periodic?.length) {
