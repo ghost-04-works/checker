@@ -373,8 +373,8 @@ async function clearCache() {
   }
 }
 
-// ── Sellmate 재고 조회 (기말재고)
-const SELLMATE_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIyIiwianRpIjoiYjUzYWZjOGI0ZTY5Yzg4YTRkZjUyMjdhZDU4YTYyZmI1YjVjMDQ2YjAwZTZkMTNlOTI2Yjc3NWY1MWIxZGY5Y2Q0OThhMzZkN2Y0ZDZjYmMiLCJpYXQiOjE3ODAzODQ2NDQuMzE0MjIxLCJuYmYiOjE3ODAzODQ2NDQuMzE0MjI0LCJleHAiOjE4MTE5MjA2NDQuMjkyNDY3LCJzdWIiOiI3NCIsInNjb3BlcyI6WyIqIl19.0fAUoR0h4E_JmPhfO_JOIavL6dpGRRtDjX882XgJaNdB_9kAb6vrxceG-0_gRsWfAJNrkuLpcEwY4Tv2ltxXH1cNk5nxxwStvaCWB03yza9_phDcXr694eCK_5ouSKMeZMLW3Kje5ySYrmyz_U0nNcM6nmqYabShN5r9O4vmr7cciq9rxOeeEszAIgrDN_FNPBQqe9JLFr-GOGQuGECHhJJUDNTSVLegSo90dWIwm3d2AZWFphDyFYxBkUE2iVJUVFDSTKcTHsB3QGXuBLMhMTl29JwCq1Vio8Lasbb-Q3yv3fC74Qn96zEnlHpMFhKaYlDokhkU56aHgWVuz1vfBNl6ne42K3WsJtynOspAxC-a-1pOtBImBi8bBGgbN4AKnXxZXb43hsZV0XX-IfC5m0CQeK603ke8Pbz2-7c7eG5zRB5mnncvH3PExePnyc1RJklYK2zYzXQ9p0Ci391Gp4voLoXa7083het2hONv1V7njGDiMayiVfoMZS97u2hPcPYE9KEvnC8Lbytf4HP7U31iKllvFt2-LgxnbgqPD_W2JXpF_6FFfhqioHyA4pBve4MC3MbKhxirxLhn2NAYVSxK5V3ligjgm5IG0qn3ng8CdXXsfjCvUbleOT_zciA4C-JxVneM0EDKqTObzMEVAcrpsnxfv5EIDbGysisV2dk';
+// ── Sellmate 재고 조회 (검색 종료일 당시 재고)
+const SELLMATE_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIyIiwianRpIjoiYTBhOWE0MGIxYzRjMjM3ZGNkNGIxNDA1OTJlZDAyMzM1YmZjMTRmOTAyNTcyMjY2MzA1MGEzYThhYjQ4MWY1MGJhMTE2MDc0ZmE3NGIyZTgiLCJpYXQiOjE3ODA1MzA0NjcuNjY1OTMsIm5iZiI6MTc4MDUzMDQ2Ny42NjU5MzMsImV4cCI6MTgxMjA2NjQ2Ny42Mzk2OTgsInN1YiI6Ijc0Iiwic2NvcGVzIjpbIioiXX0.RKZ_XdJ-nCd6GY_-jskjA5m_qnAZaBBf2zni4DL-tNdRx4LhTQ8vj8bJUzc25D89J-m61oGj9e0bNc1ey489fesOyJaJgQdm7YXSqoQgmoT4j0t2NOxRPVn4VFcUx5qnjL3Ymx86w6wEESysHY-jzAntewYicDOuKqAet2NI9HUMw1sHvE6ZadlrDGkcUYiK54gR3PkdEDR-BNpq2X_IYC_Xv6QhCAtNb3ak53NdzwspMcmqwknCiAhuc4KZ0C13tlnwa1pgAxdJ1QsZUTq8DXOjvxrXjSOrLD8JRtAHcb1Lz-Iuwrppsx6CqYvsINSuxT19J38mw-gxkKurzUO9uzEoZWVu5G7_ab-ostQ7BgqZ4uR-27u6Wh65BcfV_h6DMd9iLWvOQGgcwoYyunz9Rxke5Z37osn1fsPVLvA0adPyEdp0ywkWDtU9Y85AWTycUcdFmZ5aNVe--pR9C3NbsRL7QMmlduza-u98v_XMABRycAvSCWQJ4fI5vklXP-KbYg9Jyh8Zj7EYxDfxYHVBWG_IFuCngUpDcpO8SI7aJtdgXInVYpscXN03DUcT8irE-Rs096imP7W2qf9Qs8lyMYWOOrZhz5HApTcDyoTAUqPdheyfTF755zqdh3R4ERN9Bg_4WNqNGu6eo5jvicD4KQ6OWN2pjLLkMHVwcndT3Cg';
 
 async function fetchSellmateStock(barcode) {
   if (!barcode) return null;
@@ -382,21 +382,24 @@ async function fetchSellmateStock(barcode) {
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-01`;
-    const dateEnd = `${yyyy}-${mm}-${new Date(yyyy, today.getMonth() + 1, 0).getDate()}`;
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateFrom = `${yyyy}-${mm}-01`;
+    const dateTo = `${yyyy}-${mm}-${dd}`;
 
     const params = new URLSearchParams({
       'domains[]': 'geon',
-      'display_type': 'unified',
-      'date_from': dateStr,
-      'date_to': dateEnd,
+      'date_type': 'ordered_at',
       'queries[]': `barcode|contains|${barcode}`,
+      'periodic_basis': 'daily',
       'page': 1,
       'per_page': 5,
+      'sort': 'revenue|desc',
+      'date_from': dateFrom,
+      'date_to': dateTo,
     });
 
     const res = await fetch(
-      `https://c-api.sellmate.co.kr/tenant/geon/statistics/stocks?${params}`,
+      `https://c-api.sellmate.co.kr/tenant/geon/statistics/products?${params}`,
       {
         headers: {
           'Authorization': `Bearer ${SELLMATE_TOKEN}`,
@@ -413,11 +416,18 @@ async function fetchSellmateStock(barcode) {
     for (const product of json.data) {
       for (const variant of product.variants || []) {
         if ([variant.barcode1, variant.barcode2, variant.barcode3].includes(barcode)) {
+          // periodic_statistics 마지막 항목의 inventory_qty = 검색 종료일 당시 재고
+          const periodic = variant.periodic_statistics;
+          if (periodic?.length) {
+            return periodic[periodic.length - 1].inventory_qty ?? null;
+          }
           return variant.statistics?.closing_inventory_qty ?? null;
         }
       }
     }
-    // 매칭 없으면 첫 번째 variant 기말재고
+    // 매칭 없으면 첫 번째 product의 periodic_statistics 마지막값
+    const periodic = json.data[0]?.variants?.[0]?.periodic_statistics;
+    if (periodic?.length) return periodic[periodic.length - 1].inventory_qty ?? null;
     return json.data[0]?.variants?.[0]?.statistics?.closing_inventory_qty ?? null;
   } catch (e) {
     return null;
