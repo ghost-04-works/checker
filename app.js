@@ -291,15 +291,30 @@ function openModal(p) {
 
   // 원산지 국기
   const ORIGIN_FLAGS = {
-    KR: '🇰🇷', CN: '🇨🇳', DE: '🇩🇪', US: '🇺🇸', JP: '🇯🇵',
-    TW: '🇹🇼', GB: '🇬🇧', FR: '🇫🇷', VN: '🇻🇳', TH: '🇹🇭',
+    KR: { flag: '🇰🇷', name: 'Republic of Korea' },
+    CN: { flag: '🇨🇳', name: 'China' },
+    DE: { flag: '🇩🇪', name: 'Germany' },
+    US: { flag: '🇺🇸', name: 'United States' },
+    JP: { flag: '🇯🇵', name: 'Japan' },
+    TW: { flag: '🇹🇼', name: 'Taiwan' },
+    GB: { flag: '🇬🇧', name: 'United Kingdom' },
+    FR: { flag: '🇫🇷', name: 'France' },
+    VN: { flag: '🇻🇳', name: 'Vietnam' },
+    TH: { flag: '🇹🇭', name: 'Thailand' },
+    MY: { flag: '🇲🇾', name: 'Malaysia' },
+    AU: { flag: '🇦🇺', name: 'Australia' },
+    NZ: { flag: '🇳🇿', name: 'New Zealand' },
+    IN: { flag: '🇮🇳', name: 'India' },
+    ID: { flag: '🇮🇩', name: 'Indonesia' },
   };
   const originEl = $('modal-origin');
   if (originEl) {
     const code = (p.origin_code || '').trim().toUpperCase();
     if (code) {
-      const flag = ORIGIN_FLAGS[code] || '🌐';
-      originEl.textContent = `${flag} ${code}`;
+      const info = ORIGIN_FLAGS[code];
+      const flag = info ? info.flag : '🌐';
+      const name = info ? info.name : code;
+      originEl.textContent = `${flag} ${code} · ${name}`;
     } else {
       originEl.textContent = '';
     }
