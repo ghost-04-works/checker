@@ -40,7 +40,7 @@ async function fetchSupabaseData(silent = false) {
 
     while (true) {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes,stock,stock_updated_at&is_active=eq.true&order=sku_code`,
+        `${SUPABASE_URL}/rest/v1/products?select=sku_code,category,product_name,option,barcode,barcode_sub,location_code,brand,price,naver_product_name,naver_option_name,image_url,naver_url,shopify_url,notes,stock,stock_updated_at,origin_code&is_active=eq.true&order=sku_code`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -288,6 +288,22 @@ function openModal(p) {
   const brand    = p.brand    || '';
   $('modal-brand').textContent = [category, brand].filter(Boolean).join(' / ');
   $('modal-name').textContent  = p.product_name || '-';
+
+  // 원산지 국기
+  const ORIGIN_FLAGS = {
+    KR: '🇰🇷', CN: '🇨🇳', DE: '🇩🇪', US: '🇺🇸', JP: '🇯🇵',
+    TW: '🇹🇼', GB: '🇬🇧', FR: '🇫🇷', VN: '🇻🇳', TH: '🇹🇭',
+  };
+  const originEl = $('modal-origin');
+  if (originEl) {
+    const code = (p.origin_code || '').trim().toUpperCase();
+    if (code) {
+      const flag = ORIGIN_FLAGS[code] || '🌐';
+      originEl.textContent = `${flag} ${code}`;
+    } else {
+      originEl.textContent = '';
+    }
+  }
 
   const optVal = p.option || '';
   $('modal-option').textContent = (optVal.toUpperCase().trim() === 'N/A') ? '' : optVal;
